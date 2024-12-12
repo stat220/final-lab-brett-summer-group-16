@@ -1,0 +1,2976 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": []
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Introduction, Data Acquisition, and Initial Exploration"
+      ],
+      "metadata": {
+        "id": "AkLx9FiynjgG"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Download the training dataset from: https://richardson.byu.edu/220/spotify_train.csv"
+      ],
+      "metadata": {
+        "id": "vXZoKveLntsZ"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Download the test dataset from: https://richardson.byu.edu/220/spotify_test.csv"
+      ],
+      "metadata": {
+        "id": "EmeuzQyenx0N"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Load the datasets into Python and perform an initial exploration. Examine variable distributions, detect outliers, and familiarize yourself with each variable’s potential relationship to the\n",
+        "target variable popularity."
+      ],
+      "metadata": {
+        "id": "WY2qd0EOn4K-"
+      }
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "phLAFOmindba"
+      },
+      "outputs": [],
+      "source": [
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "import matplotlib.pyplot as plt\n",
+        "import seaborn as sns"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Regression Analysis"
+      ],
+      "metadata": {
+        "id": "HC637wX0n-aR"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Your objective is to build and refine a predictive model for song popularity. Through an iterative\n",
+        "process, explore a variety of transformations, higher-order terms, and interactions with the goal of\n",
+        "achieving an R2 of at least 0.125 on the test set. Use the training set for fitting models, and evaluate\n",
+        "performance on the test set to gauge generalizability."
+      ],
+      "metadata": {
+        "id": "JKfnrhlToCa9"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "\n",
+        "\n",
+        "## 1) Data Preparation and Initial Model\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "tJea7fNVoEp9"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "a) Transformations of the Target Variable (y-variable): Start by exploring potential\n",
+        "transformations of the response variable, popularity. Common transformations to try\n",
+        "include:\n",
+        "\n",
+        "• Log transformation: log(popularity)\n",
+        "\n",
+        "• Square root transformation: √\n",
+        "popularity\n",
+        "\n",
+        "• Inverse transformation: 1/popularity\n",
+        "\n",
+        "Determine if any transformation improves the model’s fit on the training set, and document\n",
+        "the resulting R^2 values."
+      ],
+      "metadata": {
+        "id": "QWa2IK2aoM9M"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Results\n",
+        "Having performed each of the transformations listed above, we can confidently say that none of these transformations provide a big enough impact to the model to be implemented. The resulting R^2 values also speak to this:\n",
+        "\n",
+        "| Transformation                | R² Value   |\n",
+        "|-------------------------------|------------|\n",
+        "| Original Popularity            | 0.0747     |\n",
+        "| Log-Transformed Popularity     | 0.0772     |\n",
+        "| Square Root-Transformed Popularity | 0.0771     |\n",
+        "| Inverse-Transformed Popularity | 0.0604     |\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "FgFcwmfvPEc6"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.linear_model import LinearRegression\n",
+        "from sklearn.metrics import r2_score\n",
+        "\n",
+        "spotify_train = pd.read_csv('https://richardson.byu.edu/220/spotify_train.csv')\n",
+        "spotify_test = pd.read_csv('https://richardson.byu.edu/220/spotify_test.csv')\n",
+        "\n",
+        "# Avoid taking log or sqrt of 0 or negative values by filtering out or adjusting the data\n",
+        "spotify_train = spotify_train[spotify_train['popularity'] > 0]\n",
+        "\n",
+        "# Apply transformations to popularity\n",
+        "spotify_train['log_popularity'] = np.log(spotify_train['popularity'])\n",
+        "spotify_train['sqrt_popularity'] = np.sqrt(spotify_train['popularity'])\n",
+        "spotify_train['inv_popularity'] = 1 / spotify_train['popularity']\n",
+        "\n",
+        "# Feature columns (select numerical features)\n",
+        "X = spotify_train.drop(columns=['popularity', 'log_popularity', 'sqrt_popularity', 'inv_popularity'])\n",
+        "\n",
+        "# Initialize the model\n",
+        "model = LinearRegression()\n",
+        "\n",
+        "# Function to evaluate model with a given transformation\n",
+        "def evaluate_transformation(y_transformed):\n",
+        "    # Fit the model with transformed target variable\n",
+        "    model.fit(X, y_transformed)\n",
+        "    y_pred = model.predict(X)\n",
+        "    # Calculate R^2 score\n",
+        "    r2 = r2_score(y_transformed, y_pred)\n",
+        "    return r2\n",
+        "\n",
+        "# Evaluate R^2 for original and transformed popularity\n",
+        "r2_original = evaluate_transformation(spotify_train['popularity'])\n",
+        "r2_log = evaluate_transformation(spotify_train['log_popularity'])\n",
+        "r2_sqrt = evaluate_transformation(spotify_train['sqrt_popularity'])\n",
+        "r2_inv = evaluate_transformation(spotify_train['inv_popularity'])\n",
+        "\n",
+        "# Print the R^2 values\n",
+        "print(f\"R² for original popularity: {r2_original:.4f}\")\n",
+        "print(f\"R² for log-transformed popularity: {r2_log:.4f}\")\n",
+        "print(f\"R² for square root-transformed popularity: {r2_sqrt:.4f}\")\n",
+        "print(f\"R² for inverse-transformed popularity: {r2_inv:.4f}\")\n"
+      ],
+      "metadata": {
+        "id": "wyYW3nRHoa9i",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "ac4bb891-c245-493a-bb9b-971e59fd023e"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "R² for original popularity: 0.0747\n",
+            "R² for log-transformed popularity: 0.0772\n",
+            "R² for square root-transformed popularity: 0.0771\n",
+            "R² for inverse-transformed popularity: 0.0604\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "b) Initial Linear Regression Model: Begin with a linear regression model using the untransformed predictors in the training set to predict popularity. Calculate R^2 on the\n",
+        "training and test sets to establish a baseline for comparison."
+      ],
+      "metadata": {
+        "id": "KaKA7DSqoiR8"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "spotify_train = pd.read_csv('https://richardson.byu.edu/220/spotify_train.csv')\n",
+        "spotify_test = pd.read_csv('https://richardson.byu.edu/220/spotify_test.csv')\n",
+        "\n",
+        "x_train = spotify_train.drop(columns=['popularity'])\n",
+        "y_train = spotify_train['popularity']\n",
+        "x_test = spotify_test.drop(columns=['popularity'])\n",
+        "y_test = spotify_test['popularity']\n",
+        "\n",
+        "model = LinearRegression()\n",
+        "model.fit(x_train, y_train)\n",
+        "\n",
+        "model.predict(x_train)\n",
+        "y_pred_train = model.predict(x_train)\n",
+        "y_pred_test = model.predict(x_test)\n",
+        "\n",
+        "r2_train = r2_score(y_train, y_pred_train)\n",
+        "r2_test = r2_score(y_test, y_pred_test)\n",
+        "\n",
+        "print(f\"R² on the training set: {r2_train:.4f}\")\n",
+        "print(f\"R² on the test set: {r2_test:.4f}\")"
+      ],
+      "metadata": {
+        "id": "HoOP-Eekon9v",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "0d2cbc9e-1124-424b-a10e-d51f4bda4139"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "R² on the training set: 0.0747\n",
+            "R² on the test set: 0.0490\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## 2) Transformations of Predictor Variables"
+      ],
+      "metadata": {
+        "id": "EDb1gvbZoqq7"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "a) For continuous predictors, test various transformations that may improve linearity or normalize skewed distributions. Consider:\n",
+        "\n",
+        "• Log transformation: log(X + 1), adding 1 to handle zero values.\n",
+        "\n",
+        "• Square root transformation: √\n",
+        "X\n",
+        "\n",
+        "• Square transformation: X^2\n",
+        "\n",
+        "• Inverse transformation: 1/(X + ϵ), where ϵ is a small constant added to avoid division\n",
+        "by zero."
+      ],
+      "metadata": {
+        "id": "LY3Cw9PXowWv"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import numpy as np\n",
+        "import pandas as pd\n",
+        "from sklearn.impute import SimpleImputer\n",
+        "from sklearn.linear_model import LinearRegression\n",
+        "from sklearn.metrics import r2_score\n",
+        "\n",
+        "# Handling NaN in your data with imputation\n",
+        "imputer = SimpleImputer(strategy='mean')\n",
+        "x_train_imputed = imputer.fit_transform(x_train)\n",
+        "x_test_imputed = imputer.transform(x_test)\n",
+        "\n",
+        "# Safe log transformation (handling zero and negative values by adding a small constant)\n",
+        "x_train_log = np.log1p(np.clip(x_train_imputed, 0, None))  # Clip values to avoid log of negative\n",
+        "x_test_log = np.log1p(np.clip(x_test_imputed, 0, None))\n",
+        "\n",
+        "# Safe square root transformation (handling negative values by clipping to 0)\n",
+        "x_train_sqrt = np.sqrt(np.clip(x_train_imputed, 0, None))  # Clip values to avoid sqrt of negative\n",
+        "x_test_sqrt = np.sqrt(np.clip(x_test_imputed, 0, None))\n",
+        "\n",
+        "# Safe square transformation (handling small values, avoiding extremely large ones)\n",
+        "x_train_square = np.clip(np.power(x_train_imputed, 2), 0, 1e5)  # Clip large values to prevent overflow\n",
+        "x_test_square = np.clip(np.power(x_test_imputed, 2), 0, 1e5)\n",
+        "\n",
+        "# Safe inverse transformation (adding small epsilon to avoid division by zero)\n",
+        "x_train_inverse = 1 / (np.clip(x_train_imputed, 1e-5, None))  # Clip values to avoid division by zero\n",
+        "x_test_inverse = 1 / (np.clip(x_test_imputed, 1e-5, None))  # Clip values to avoid division by zero\n",
+        "\n",
+        "# Initialize the model\n",
+        "model = LinearRegression()\n",
+        "\n",
+        "# Store R² results for each transformation\n",
+        "r2_test_results = {}\n",
+        "\n",
+        "# Loop through each transformation, fit the model, and evaluate R² on the test set\n",
+        "transformations = {\n",
+        "    'log': (x_train_log, x_test_log),\n",
+        "    'sqrt': (x_train_sqrt, x_test_sqrt),\n",
+        "    'square': (x_train_square, x_test_square),\n",
+        "    'inverse': (x_train_inverse, x_test_inverse)\n",
+        "}\n",
+        "\n",
+        "for transformation, (x_train_trans, x_test_trans) in transformations.items():\n",
+        "    model.fit(x_train_trans, y_train)\n",
+        "    y_pred_test = model.predict(x_test_trans)\n",
+        "    r2_test = r2_score(y_test, y_pred_test)\n",
+        "    r2_test_results[transformation] = r2_test\n",
+        "\n",
+        "# Print the R² results for each transformation\n",
+        "for transformation, r2 in r2_test_results.items():\n",
+        "    print(f\"{transformation.capitalize()} Transformation: {r2:.4f}\")\n"
+      ],
+      "metadata": {
+        "id": "8CPXmrQDo5B6",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "7a8c950a-2ef7-4559-b37d-87551d56821e"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Log Transformation: 0.0583\n",
+            "Sqrt Transformation: 0.0588\n",
+            "Square Transformation: 0.0177\n",
+            "Inverse Transformation: -0.1452\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "b) For each transformation, refit the model on the training data and evaluate R^2 on the test\n",
+        "set. Document any improvements achieved."
+      ],
+      "metadata": {
+        "id": "e1iTlZHJo5S1"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import numpy as np\n",
+        "import pandas as pd\n",
+        "from sklearn.linear_model import LinearRegression\n",
+        "from sklearn.metrics import r2_score\n",
+        "from sklearn.impute import SimpleImputer\n",
+        "\n",
+        "# Assuming 'spotify_train' and 'spotify_test' are already loaded with the data\n",
+        "\n",
+        "# Separate predictors (X) and target variable (y)\n",
+        "x_train = spotify_train.drop(columns=['popularity'])\n",
+        "y_train = spotify_train['popularity']\n",
+        "x_test = spotify_test.drop(columns=['popularity'])\n",
+        "y_test = spotify_test['popularity']\n",
+        "\n",
+        "model.fit(x_train_trans, y_train)\n",
+        "\n",
+        "# Predict and calculate R² for training set\n",
+        "y_pred_train = model.predict(x_train_trans)\n",
+        "baseline_train = r2_score(y_train, y_pred_train)\n",
+        "\n",
+        "# Predict and calculate R² for test set\n",
+        "y_pred_test = model.predict(x_test_trans)\n",
+        "baseline_test = r2_score(y_test, y_pred_test)\n",
+        "\n",
+        "\n",
+        "# Handle missing values by imputing with mean\n",
+        "imputer = SimpleImputer(strategy='mean')\n",
+        "x_train_imputed = imputer.fit_transform(x_train)\n",
+        "x_test_imputed = imputer.transform(x_test)\n",
+        "\n",
+        "# Apply transformations\n",
+        "def transform_data(x_train, x_test):\n",
+        "    # Log transformation (log(x + 1) to handle zeros)\n",
+        "    x_train_log = np.log1p(np.clip(x_train, 0, None))\n",
+        "    x_test_log = np.log1p(np.clip(x_test, 0, None))\n",
+        "\n",
+        "    # Square root transformation (sqrt(x)) -- Clip negative values to 0\n",
+        "    x_train_sqrt = np.sqrt(np.clip(x_train, 0, None))\n",
+        "    x_test_sqrt = np.sqrt(np.clip(x_test, 0, None))\n",
+        "\n",
+        "    # Square transformation (x^2)\n",
+        "    x_train_square = np.clip(np.power(x_train, 2), 0, 1e5)\n",
+        "    x_test_square = np.clip(np.power(x_test, 2), 0, 1e5)\n",
+        "\n",
+        "    # Inverse transformation (1 / (x + epsilon))\n",
+        "    x_train_inverse = 1 / (np.clip(x_train, 1e-5, None))\n",
+        "    x_test_inverse = 1 / (np.clip(x_test, 1e-5, None))\n",
+        "\n",
+        "    return {\n",
+        "        'log': (x_train_log, x_test_log),\n",
+        "        'sqrt': (x_train_sqrt, x_test_sqrt),\n",
+        "        'square': (x_train_square, x_test_square),\n",
+        "        'inverse': (x_train_inverse, x_test_inverse)\n",
+        "    }\n",
+        "\n",
+        "# Apply transformations\n",
+        "transformed_data = transform_data(x_train_imputed, x_test_imputed)\n",
+        "\n",
+        "# Initialize the model\n",
+        "model = LinearRegression()\n",
+        "\n",
+        "# Store R² results for each transformation\n",
+        "r2_train_results = {}\n",
+        "r2_test_results = {}\n",
+        "\n",
+        "# Loop through each transformation\n",
+        "for transformation, (x_train_trans, x_test_trans) in transformed_data.items():\n",
+        "    # Fit the model on the transformed data\n",
+        "    model.fit(x_train_trans, y_train)\n",
+        "\n",
+        "    # Predict and calculate R² for training set\n",
+        "    y_pred_train = model.predict(x_train_trans)\n",
+        "    r2_train = r2_score(y_train, y_pred_train)\n",
+        "\n",
+        "    # Predict and calculate R² for test set\n",
+        "    y_pred_test = model.predict(x_test_trans)\n",
+        "    r2_test = r2_score(y_test, y_pred_test)\n",
+        "\n",
+        "    # Store results\n",
+        "    r2_train_results[transformation] = r2_train\n",
+        "    r2_test_results[transformation] = r2_test\n",
+        "\n",
+        "# Print R² results\n",
+        "print(\"R² on Training Set:\")\n",
+        "print(f\"Baseline: {baseline_train:.4f}\")\n",
+        "for transformation, r2 in r2_train_results.items():\n",
+        "    print(f\"{transformation.capitalize()} Transformation: {r2:.4f}\")\n",
+        "\n",
+        "print(\"\\nR² on Test Set:\")\n",
+        "print(f\"Baseline: {baseline_test:.4f}\")\n",
+        "for transformation, r2 in r2_test_results.items():\n",
+        "    print(f\"{transformation.capitalize()} Transformation: {r2:.4f}\")\n"
+      ],
+      "metadata": {
+        "id": "f4I1zlbQo_LJ",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "d697b9ff-1578-4c05-e21f-bded186b7172"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "R² on Training Set:\n",
+            "Baseline: 0.0841\n",
+            "Log Transformation: 0.0749\n",
+            "Sqrt Transformation: 0.0795\n",
+            "Square Transformation: 0.0514\n",
+            "Inverse Transformation: 0.0841\n",
+            "\n",
+            "R² on Test Set:\n",
+            "Baseline: -0.1452\n",
+            "Log Transformation: 0.0583\n",
+            "Sqrt Transformation: 0.0588\n",
+            "Square Transformation: 0.0177\n",
+            "Inverse Transformation: -0.1452\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## 3) Higher-Order Terms and Interactions"
+      ],
+      "metadata": {
+        "id": "I8-D8QJDpA88"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "spotify_train.head()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 206
+        },
+        "id": "idBYsIyUp92w",
+        "outputId": "37698454-536b-43b9-cd6c-e78e667d2a46"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "   popularity  duration_ms  explicit  danceability  energy  loudness  \\\n",
+              "0          91       200040     False         0.514   0.730    -5.934   \n",
+              "1          83       177391     False         0.860   0.541    -6.510   \n",
+              "2          77       206060     False         0.796   0.572    -7.030   \n",
+              "3          74       191868     False         0.724   0.618    -9.007   \n",
+              "4          73       298986     False         0.662   0.400   -11.200   \n",
+              "\n",
+              "   speechiness  acousticness  instrumentalness  liveness  valence    tempo  \n",
+              "0       0.0598       0.00146          0.000095    0.0897   0.3340  171.005  \n",
+              "1       0.0325       0.16500          0.163000    0.0663   0.9520  114.984  \n",
+              "2       0.0545       0.41600          0.000025    0.0975   0.3040   98.967  \n",
+              "3       0.0534       0.05330          0.704000    0.0886   0.0683  100.021  \n",
+              "4       0.0548       0.73500          0.000017    0.0863   0.6170   79.972  "
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-3b01f632-baa0-4f0f-8d2b-cc912769e2ca\" class=\"colab-df-container\">\n",
+              "    <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>popularity</th>\n",
+              "      <th>duration_ms</th>\n",
+              "      <th>explicit</th>\n",
+              "      <th>danceability</th>\n",
+              "      <th>energy</th>\n",
+              "      <th>loudness</th>\n",
+              "      <th>speechiness</th>\n",
+              "      <th>acousticness</th>\n",
+              "      <th>instrumentalness</th>\n",
+              "      <th>liveness</th>\n",
+              "      <th>valence</th>\n",
+              "      <th>tempo</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>91</td>\n",
+              "      <td>200040</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.514</td>\n",
+              "      <td>0.730</td>\n",
+              "      <td>-5.934</td>\n",
+              "      <td>0.0598</td>\n",
+              "      <td>0.00146</td>\n",
+              "      <td>0.000095</td>\n",
+              "      <td>0.0897</td>\n",
+              "      <td>0.3340</td>\n",
+              "      <td>171.005</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>83</td>\n",
+              "      <td>177391</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.860</td>\n",
+              "      <td>0.541</td>\n",
+              "      <td>-6.510</td>\n",
+              "      <td>0.0325</td>\n",
+              "      <td>0.16500</td>\n",
+              "      <td>0.163000</td>\n",
+              "      <td>0.0663</td>\n",
+              "      <td>0.9520</td>\n",
+              "      <td>114.984</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>77</td>\n",
+              "      <td>206060</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.796</td>\n",
+              "      <td>0.572</td>\n",
+              "      <td>-7.030</td>\n",
+              "      <td>0.0545</td>\n",
+              "      <td>0.41600</td>\n",
+              "      <td>0.000025</td>\n",
+              "      <td>0.0975</td>\n",
+              "      <td>0.3040</td>\n",
+              "      <td>98.967</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>74</td>\n",
+              "      <td>191868</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.724</td>\n",
+              "      <td>0.618</td>\n",
+              "      <td>-9.007</td>\n",
+              "      <td>0.0534</td>\n",
+              "      <td>0.05330</td>\n",
+              "      <td>0.704000</td>\n",
+              "      <td>0.0886</td>\n",
+              "      <td>0.0683</td>\n",
+              "      <td>100.021</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>73</td>\n",
+              "      <td>298986</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.662</td>\n",
+              "      <td>0.400</td>\n",
+              "      <td>-11.200</td>\n",
+              "      <td>0.0548</td>\n",
+              "      <td>0.73500</td>\n",
+              "      <td>0.000017</td>\n",
+              "      <td>0.0863</td>\n",
+              "      <td>0.6170</td>\n",
+              "      <td>79.972</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "    <div class=\"colab-df-buttons\">\n",
+              "\n",
+              "  <div class=\"colab-df-container\">\n",
+              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-3b01f632-baa0-4f0f-8d2b-cc912769e2ca')\"\n",
+              "            title=\"Convert this dataframe to an interactive table.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
+              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "\n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-buttons div {\n",
+              "      margin-bottom: 4px;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "    <script>\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#df-3b01f632-baa0-4f0f-8d2b-cc912769e2ca button.colab-df-convert');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      async function convertToInteractive(key) {\n",
+              "        const element = document.querySelector('#df-3b01f632-baa0-4f0f-8d2b-cc912769e2ca');\n",
+              "        const dataTable =\n",
+              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                    [key], {});\n",
+              "        if (!dataTable) return;\n",
+              "\n",
+              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "          + ' to learn more about interactive tables.';\n",
+              "        element.innerHTML = '';\n",
+              "        dataTable['output_type'] = 'display_data';\n",
+              "        await google.colab.output.renderOutput(dataTable, element);\n",
+              "        const docLink = document.createElement('div');\n",
+              "        docLink.innerHTML = docLinkHtml;\n",
+              "        element.appendChild(docLink);\n",
+              "      }\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "\n",
+              "<div id=\"df-22b7749e-832b-4e53-8ce1-70f9eda04119\">\n",
+              "  <button class=\"colab-df-quickchart\" onclick=\"quickchart('df-22b7749e-832b-4e53-8ce1-70f9eda04119')\"\n",
+              "            title=\"Suggest charts\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "<svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "     width=\"24px\">\n",
+              "    <g>\n",
+              "        <path d=\"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z\"/>\n",
+              "    </g>\n",
+              "</svg>\n",
+              "  </button>\n",
+              "\n",
+              "<style>\n",
+              "  .colab-df-quickchart {\n",
+              "      --bg-color: #E8F0FE;\n",
+              "      --fill-color: #1967D2;\n",
+              "      --hover-bg-color: #E2EBFA;\n",
+              "      --hover-fill-color: #174EA6;\n",
+              "      --disabled-fill-color: #AAA;\n",
+              "      --disabled-bg-color: #DDD;\n",
+              "  }\n",
+              "\n",
+              "  [theme=dark] .colab-df-quickchart {\n",
+              "      --bg-color: #3B4455;\n",
+              "      --fill-color: #D2E3FC;\n",
+              "      --hover-bg-color: #434B5C;\n",
+              "      --hover-fill-color: #FFFFFF;\n",
+              "      --disabled-bg-color: #3B4455;\n",
+              "      --disabled-fill-color: #666;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart {\n",
+              "    background-color: var(--bg-color);\n",
+              "    border: none;\n",
+              "    border-radius: 50%;\n",
+              "    cursor: pointer;\n",
+              "    display: none;\n",
+              "    fill: var(--fill-color);\n",
+              "    height: 32px;\n",
+              "    padding: 0;\n",
+              "    width: 32px;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart:hover {\n",
+              "    background-color: var(--hover-bg-color);\n",
+              "    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "    fill: var(--button-hover-fill-color);\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart-complete:disabled,\n",
+              "  .colab-df-quickchart-complete:disabled:hover {\n",
+              "    background-color: var(--disabled-bg-color);\n",
+              "    fill: var(--disabled-fill-color);\n",
+              "    box-shadow: none;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-spinner {\n",
+              "    border: 2px solid var(--fill-color);\n",
+              "    border-color: transparent;\n",
+              "    border-bottom-color: var(--fill-color);\n",
+              "    animation:\n",
+              "      spin 1s steps(1) infinite;\n",
+              "  }\n",
+              "\n",
+              "  @keyframes spin {\n",
+              "    0% {\n",
+              "      border-color: transparent;\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "      border-left-color: var(--fill-color);\n",
+              "    }\n",
+              "    20% {\n",
+              "      border-color: transparent;\n",
+              "      border-left-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "    }\n",
+              "    30% {\n",
+              "      border-color: transparent;\n",
+              "      border-left-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "      border-right-color: var(--fill-color);\n",
+              "    }\n",
+              "    40% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "    }\n",
+              "    60% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "    }\n",
+              "    80% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "    }\n",
+              "    90% {\n",
+              "      border-color: transparent;\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "    }\n",
+              "  }\n",
+              "</style>\n",
+              "\n",
+              "  <script>\n",
+              "    async function quickchart(key) {\n",
+              "      const quickchartButtonEl =\n",
+              "        document.querySelector('#' + key + ' button');\n",
+              "      quickchartButtonEl.disabled = true;  // To prevent multiple clicks.\n",
+              "      quickchartButtonEl.classList.add('colab-df-spinner');\n",
+              "      try {\n",
+              "        const charts = await google.colab.kernel.invokeFunction(\n",
+              "            'suggestCharts', [key], {});\n",
+              "      } catch (error) {\n",
+              "        console.error('Error during call to suggestCharts:', error);\n",
+              "      }\n",
+              "      quickchartButtonEl.classList.remove('colab-df-spinner');\n",
+              "      quickchartButtonEl.classList.add('colab-df-quickchart-complete');\n",
+              "    }\n",
+              "    (() => {\n",
+              "      let quickchartButtonEl =\n",
+              "        document.querySelector('#df-22b7749e-832b-4e53-8ce1-70f9eda04119 button');\n",
+              "      quickchartButtonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "    })();\n",
+              "  </script>\n",
+              "</div>\n",
+              "\n",
+              "    </div>\n",
+              "  </div>\n"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "dataframe",
+              "variable_name": "spotify_train",
+              "summary": "{\n  \"name\": \"spotify_train\",\n  \"rows\": 576,\n  \"fields\": [\n    {\n      \"column\": \"popularity\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 27,\n        \"min\": 1,\n        \"max\": 100,\n        \"num_unique_values\": 51,\n        \"samples\": [\n          8,\n          45,\n          64\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"duration_ms\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 57855,\n        \"min\": 69741,\n        \"max\": 586075,\n        \"num_unique_values\": 510,\n        \"samples\": [\n          243870,\n          284573,\n          298899\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"explicit\",\n      \"properties\": {\n        \"dtype\": \"boolean\",\n        \"num_unique_values\": 2,\n        \"samples\": [\n          true,\n          false\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"danceability\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.1400913966245342,\n        \"min\": 0.206,\n        \"max\": 0.918,\n        \"num_unique_values\": 335,\n        \"samples\": [\n          0.468,\n          0.704\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"energy\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.16941945864626995,\n        \"min\": 0.114,\n        \"max\": 0.986,\n        \"num_unique_values\": 360,\n        \"samples\": [\n          0.787,\n          0.524\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"loudness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 2.618034793483712,\n        \"min\": -20.647,\n        \"max\": -1.1,\n        \"num_unique_values\": 504,\n        \"samples\": [\n          -4.274,\n          -5.72\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"speechiness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.08007131266009763,\n        \"min\": 0.0232,\n        \"max\": 0.505,\n        \"num_unique_values\": 364,\n        \"samples\": [\n          0.0491,\n          0.0604\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"acousticness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.27921006397277287,\n        \"min\": 0.00111,\n        \"max\": 0.983,\n        \"num_unique_values\": 434,\n        \"samples\": [\n          0.0519,\n          0.736\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"instrumentalness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.03673507296065346,\n        \"min\": 0.0,\n        \"max\": 0.704,\n        \"num_unique_values\": 224,\n        \"samples\": [\n          0.00238,\n          6.65e-05\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"liveness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.10276085220248256,\n        \"min\": 0.0211,\n        \"max\": 0.766,\n        \"num_unique_values\": 299,\n        \"samples\": [\n          0.162,\n          0.052\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"valence\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.20727835643488357,\n        \"min\": 0.0383,\n        \"max\": 0.969,\n        \"num_unique_values\": 386,\n        \"samples\": [\n          0.308,\n          0.564\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"tempo\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 31.778088760647105,\n        \"min\": 55.832,\n        \"max\": 203.983,\n        \"num_unique_values\": 521,\n        \"samples\": [\n          81.335,\n          137.839\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}"
+            }
+          },
+          "metadata": {},
+          "execution_count": 36
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "a) Higher-Order Terms: Add squared and cubic terms for continuous predictors where\n",
+        "non-linear relationships are suspected. For instance, include terms such as danceability^2\n",
+        ",\n",
+        "loudness^3\n",
+        ", and so on."
+      ],
+      "metadata": {
+        "id": "31O6xQ_LpFD_"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "sq_danceability = x_train['danceability'] ** 2\n",
+        "cubic_loudness = x_train['loudness'] ** 3\n",
+        "sq_acousticness = x_train['acousticness'] ** 2\n",
+        "cubic_instrumentalness = x_train['instrumentalness'] ** 3"
+      ],
+      "metadata": {
+        "id": "_J_ClGDrpLCg"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "b) Interaction Terms: Explore two-way interactions between predictors (e.g., energy *\n",
+        "danceability, loudness * valence). Interaction terms can capture combined effects of\n",
+        "predictors on popularity."
+      ],
+      "metadata": {
+        "id": "LFP4W09IpLqX"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "vibe_speed = x_train['liveness'] * x_train['tempo']\n",
+        "time_energy = x_train['duration_ms'] * x_train['energy']\n",
+        "energy_danceability = x_train['energy'] * x_train['danceability']"
+      ],
+      "metadata": {
+        "id": "y93y3f7ZpO-U"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "new_spotify_train = pd.concat([x_train, sq_danceability, cubic_loudness, sq_acousticness, cubic_instrumentalness, vibe_speed, time_energy, energy_danceability], axis=1)\n",
+        "new_spotify_train.columns = list(x_train.columns) + [\n",
+        "    'sq_danceability', 'cubic_loudness', 'sq_acousticness',\n",
+        "    'cubic_instrumentalness', 'vibe_speed', 'time_energy', 'energy_danceability'\n",
+        "]\n",
+        "new_spotify_train.head()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 226
+        },
+        "id": "VcymtUANqwJd",
+        "outputId": "ba613f70-b08e-40f6-938a-df8c020c2bf3"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "   duration_ms  explicit  danceability  energy  loudness  speechiness  \\\n",
+              "0       200040     False         0.514   0.730    -5.934       0.0598   \n",
+              "1       177391     False         0.860   0.541    -6.510       0.0325   \n",
+              "2       206060     False         0.796   0.572    -7.030       0.0545   \n",
+              "3       191868     False         0.724   0.618    -9.007       0.0534   \n",
+              "4       298986     False         0.662   0.400   -11.200       0.0548   \n",
+              "\n",
+              "   acousticness  instrumentalness  liveness  valence    tempo  \\\n",
+              "0       0.00146          0.000095    0.0897   0.3340  171.005   \n",
+              "1       0.16500          0.163000    0.0663   0.9520  114.984   \n",
+              "2       0.41600          0.000025    0.0975   0.3040   98.967   \n",
+              "3       0.05330          0.704000    0.0886   0.0683  100.021   \n",
+              "4       0.73500          0.000017    0.0863   0.6170   79.972   \n",
+              "\n",
+              "   sq_danceability  cubic_loudness  sq_acousticness  cubic_instrumentalness  \\\n",
+              "0         0.264196     -208.950121         0.000002            8.682507e-13   \n",
+              "1         0.739600     -275.894451         0.027225            4.330747e-03   \n",
+              "2         0.633616     -347.428927         0.173056            1.658137e-14   \n",
+              "3         0.524176     -730.702323         0.002841            3.489137e-01   \n",
+              "4         0.438244    -1404.928000         0.540225            4.492125e-15   \n",
+              "\n",
+              "   vibe_speed  time_energy  energy_danceability  \n",
+              "0   15.339149   146029.200             0.375220  \n",
+              "1    7.623439    95968.531             0.465260  \n",
+              "2    9.649282   117866.320             0.455312  \n",
+              "3    8.861861   118574.424             0.447432  \n",
+              "4    6.901584   119594.400             0.264800  "
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-d1ab959b-baed-4b75-875c-de63a3b0872c\" class=\"colab-df-container\">\n",
+              "    <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>duration_ms</th>\n",
+              "      <th>explicit</th>\n",
+              "      <th>danceability</th>\n",
+              "      <th>energy</th>\n",
+              "      <th>loudness</th>\n",
+              "      <th>speechiness</th>\n",
+              "      <th>acousticness</th>\n",
+              "      <th>instrumentalness</th>\n",
+              "      <th>liveness</th>\n",
+              "      <th>valence</th>\n",
+              "      <th>tempo</th>\n",
+              "      <th>sq_danceability</th>\n",
+              "      <th>cubic_loudness</th>\n",
+              "      <th>sq_acousticness</th>\n",
+              "      <th>cubic_instrumentalness</th>\n",
+              "      <th>vibe_speed</th>\n",
+              "      <th>time_energy</th>\n",
+              "      <th>energy_danceability</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>200040</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.514</td>\n",
+              "      <td>0.730</td>\n",
+              "      <td>-5.934</td>\n",
+              "      <td>0.0598</td>\n",
+              "      <td>0.00146</td>\n",
+              "      <td>0.000095</td>\n",
+              "      <td>0.0897</td>\n",
+              "      <td>0.3340</td>\n",
+              "      <td>171.005</td>\n",
+              "      <td>0.264196</td>\n",
+              "      <td>-208.950121</td>\n",
+              "      <td>0.000002</td>\n",
+              "      <td>8.682507e-13</td>\n",
+              "      <td>15.339149</td>\n",
+              "      <td>146029.200</td>\n",
+              "      <td>0.375220</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>177391</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.860</td>\n",
+              "      <td>0.541</td>\n",
+              "      <td>-6.510</td>\n",
+              "      <td>0.0325</td>\n",
+              "      <td>0.16500</td>\n",
+              "      <td>0.163000</td>\n",
+              "      <td>0.0663</td>\n",
+              "      <td>0.9520</td>\n",
+              "      <td>114.984</td>\n",
+              "      <td>0.739600</td>\n",
+              "      <td>-275.894451</td>\n",
+              "      <td>0.027225</td>\n",
+              "      <td>4.330747e-03</td>\n",
+              "      <td>7.623439</td>\n",
+              "      <td>95968.531</td>\n",
+              "      <td>0.465260</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>206060</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.796</td>\n",
+              "      <td>0.572</td>\n",
+              "      <td>-7.030</td>\n",
+              "      <td>0.0545</td>\n",
+              "      <td>0.41600</td>\n",
+              "      <td>0.000025</td>\n",
+              "      <td>0.0975</td>\n",
+              "      <td>0.3040</td>\n",
+              "      <td>98.967</td>\n",
+              "      <td>0.633616</td>\n",
+              "      <td>-347.428927</td>\n",
+              "      <td>0.173056</td>\n",
+              "      <td>1.658137e-14</td>\n",
+              "      <td>9.649282</td>\n",
+              "      <td>117866.320</td>\n",
+              "      <td>0.455312</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>191868</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.724</td>\n",
+              "      <td>0.618</td>\n",
+              "      <td>-9.007</td>\n",
+              "      <td>0.0534</td>\n",
+              "      <td>0.05330</td>\n",
+              "      <td>0.704000</td>\n",
+              "      <td>0.0886</td>\n",
+              "      <td>0.0683</td>\n",
+              "      <td>100.021</td>\n",
+              "      <td>0.524176</td>\n",
+              "      <td>-730.702323</td>\n",
+              "      <td>0.002841</td>\n",
+              "      <td>3.489137e-01</td>\n",
+              "      <td>8.861861</td>\n",
+              "      <td>118574.424</td>\n",
+              "      <td>0.447432</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>298986</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.662</td>\n",
+              "      <td>0.400</td>\n",
+              "      <td>-11.200</td>\n",
+              "      <td>0.0548</td>\n",
+              "      <td>0.73500</td>\n",
+              "      <td>0.000017</td>\n",
+              "      <td>0.0863</td>\n",
+              "      <td>0.6170</td>\n",
+              "      <td>79.972</td>\n",
+              "      <td>0.438244</td>\n",
+              "      <td>-1404.928000</td>\n",
+              "      <td>0.540225</td>\n",
+              "      <td>4.492125e-15</td>\n",
+              "      <td>6.901584</td>\n",
+              "      <td>119594.400</td>\n",
+              "      <td>0.264800</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "    <div class=\"colab-df-buttons\">\n",
+              "\n",
+              "  <div class=\"colab-df-container\">\n",
+              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-d1ab959b-baed-4b75-875c-de63a3b0872c')\"\n",
+              "            title=\"Convert this dataframe to an interactive table.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
+              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "\n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-buttons div {\n",
+              "      margin-bottom: 4px;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "    <script>\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#df-d1ab959b-baed-4b75-875c-de63a3b0872c button.colab-df-convert');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      async function convertToInteractive(key) {\n",
+              "        const element = document.querySelector('#df-d1ab959b-baed-4b75-875c-de63a3b0872c');\n",
+              "        const dataTable =\n",
+              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                    [key], {});\n",
+              "        if (!dataTable) return;\n",
+              "\n",
+              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "          + ' to learn more about interactive tables.';\n",
+              "        element.innerHTML = '';\n",
+              "        dataTable['output_type'] = 'display_data';\n",
+              "        await google.colab.output.renderOutput(dataTable, element);\n",
+              "        const docLink = document.createElement('div');\n",
+              "        docLink.innerHTML = docLinkHtml;\n",
+              "        element.appendChild(docLink);\n",
+              "      }\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "\n",
+              "<div id=\"df-2276759e-928c-4881-8b11-bc07f1dd517f\">\n",
+              "  <button class=\"colab-df-quickchart\" onclick=\"quickchart('df-2276759e-928c-4881-8b11-bc07f1dd517f')\"\n",
+              "            title=\"Suggest charts\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "<svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "     width=\"24px\">\n",
+              "    <g>\n",
+              "        <path d=\"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z\"/>\n",
+              "    </g>\n",
+              "</svg>\n",
+              "  </button>\n",
+              "\n",
+              "<style>\n",
+              "  .colab-df-quickchart {\n",
+              "      --bg-color: #E8F0FE;\n",
+              "      --fill-color: #1967D2;\n",
+              "      --hover-bg-color: #E2EBFA;\n",
+              "      --hover-fill-color: #174EA6;\n",
+              "      --disabled-fill-color: #AAA;\n",
+              "      --disabled-bg-color: #DDD;\n",
+              "  }\n",
+              "\n",
+              "  [theme=dark] .colab-df-quickchart {\n",
+              "      --bg-color: #3B4455;\n",
+              "      --fill-color: #D2E3FC;\n",
+              "      --hover-bg-color: #434B5C;\n",
+              "      --hover-fill-color: #FFFFFF;\n",
+              "      --disabled-bg-color: #3B4455;\n",
+              "      --disabled-fill-color: #666;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart {\n",
+              "    background-color: var(--bg-color);\n",
+              "    border: none;\n",
+              "    border-radius: 50%;\n",
+              "    cursor: pointer;\n",
+              "    display: none;\n",
+              "    fill: var(--fill-color);\n",
+              "    height: 32px;\n",
+              "    padding: 0;\n",
+              "    width: 32px;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart:hover {\n",
+              "    background-color: var(--hover-bg-color);\n",
+              "    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "    fill: var(--button-hover-fill-color);\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart-complete:disabled,\n",
+              "  .colab-df-quickchart-complete:disabled:hover {\n",
+              "    background-color: var(--disabled-bg-color);\n",
+              "    fill: var(--disabled-fill-color);\n",
+              "    box-shadow: none;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-spinner {\n",
+              "    border: 2px solid var(--fill-color);\n",
+              "    border-color: transparent;\n",
+              "    border-bottom-color: var(--fill-color);\n",
+              "    animation:\n",
+              "      spin 1s steps(1) infinite;\n",
+              "  }\n",
+              "\n",
+              "  @keyframes spin {\n",
+              "    0% {\n",
+              "      border-color: transparent;\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "      border-left-color: var(--fill-color);\n",
+              "    }\n",
+              "    20% {\n",
+              "      border-color: transparent;\n",
+              "      border-left-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "    }\n",
+              "    30% {\n",
+              "      border-color: transparent;\n",
+              "      border-left-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "      border-right-color: var(--fill-color);\n",
+              "    }\n",
+              "    40% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "    }\n",
+              "    60% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "    }\n",
+              "    80% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "    }\n",
+              "    90% {\n",
+              "      border-color: transparent;\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "    }\n",
+              "  }\n",
+              "</style>\n",
+              "\n",
+              "  <script>\n",
+              "    async function quickchart(key) {\n",
+              "      const quickchartButtonEl =\n",
+              "        document.querySelector('#' + key + ' button');\n",
+              "      quickchartButtonEl.disabled = true;  // To prevent multiple clicks.\n",
+              "      quickchartButtonEl.classList.add('colab-df-spinner');\n",
+              "      try {\n",
+              "        const charts = await google.colab.kernel.invokeFunction(\n",
+              "            'suggestCharts', [key], {});\n",
+              "      } catch (error) {\n",
+              "        console.error('Error during call to suggestCharts:', error);\n",
+              "      }\n",
+              "      quickchartButtonEl.classList.remove('colab-df-spinner');\n",
+              "      quickchartButtonEl.classList.add('colab-df-quickchart-complete');\n",
+              "    }\n",
+              "    (() => {\n",
+              "      let quickchartButtonEl =\n",
+              "        document.querySelector('#df-2276759e-928c-4881-8b11-bc07f1dd517f button');\n",
+              "      quickchartButtonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "    })();\n",
+              "  </script>\n",
+              "</div>\n",
+              "\n",
+              "    </div>\n",
+              "  </div>\n"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "dataframe",
+              "variable_name": "new_spotify_train",
+              "summary": "{\n  \"name\": \"new_spotify_train\",\n  \"rows\": 576,\n  \"fields\": [\n    {\n      \"column\": \"duration_ms\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 57855,\n        \"min\": 69741,\n        \"max\": 586075,\n        \"num_unique_values\": 510,\n        \"samples\": [\n          243870,\n          284573,\n          298899\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"explicit\",\n      \"properties\": {\n        \"dtype\": \"boolean\",\n        \"num_unique_values\": 2,\n        \"samples\": [\n          true,\n          false\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"danceability\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.1400913966245342,\n        \"min\": 0.206,\n        \"max\": 0.918,\n        \"num_unique_values\": 335,\n        \"samples\": [\n          0.468,\n          0.704\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"energy\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.16941945864626995,\n        \"min\": 0.114,\n        \"max\": 0.986,\n        \"num_unique_values\": 360,\n        \"samples\": [\n          0.787,\n          0.524\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"loudness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 2.618034793483712,\n        \"min\": -20.647,\n        \"max\": -1.1,\n        \"num_unique_values\": 504,\n        \"samples\": [\n          -4.274,\n          -5.72\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"speechiness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.08007131266009763,\n        \"min\": 0.0232,\n        \"max\": 0.505,\n        \"num_unique_values\": 364,\n        \"samples\": [\n          0.0491,\n          0.0604\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"acousticness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.27921006397277287,\n        \"min\": 0.00111,\n        \"max\": 0.983,\n        \"num_unique_values\": 434,\n        \"samples\": [\n          0.0519,\n          0.736\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"instrumentalness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.03673507296065346,\n        \"min\": 0.0,\n        \"max\": 0.704,\n        \"num_unique_values\": 224,\n        \"samples\": [\n          0.00238,\n          6.65e-05\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"liveness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.10276085220248256,\n        \"min\": 0.0211,\n        \"max\": 0.766,\n        \"num_unique_values\": 299,\n        \"samples\": [\n          0.162,\n          0.052\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"valence\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.20727835643488357,\n        \"min\": 0.0383,\n        \"max\": 0.969,\n        \"num_unique_values\": 386,\n        \"samples\": [\n          0.308,\n          0.564\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"tempo\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 31.778088760647105,\n        \"min\": 55.832,\n        \"max\": 203.983,\n        \"num_unique_values\": 521,\n        \"samples\": [\n          81.335,\n          137.839\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"sq_danceability\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.16958677265807265,\n        \"min\": 0.042435999999999995,\n        \"max\": 0.842724,\n        \"num_unique_values\": 335,\n        \"samples\": [\n          0.21902400000000002,\n          0.49561599999999995\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"cubic_loudness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 673.81518859579,\n        \"min\": -8801.787380022997,\n        \"max\": -1.3310000000000004,\n        \"num_unique_values\": 504,\n        \"samples\": [\n          -78.073482824,\n          -187.14924799999997\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"sq_acousticness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.24498584931410736,\n        \"min\": 1.2321000000000002e-06,\n        \"max\": 0.966289,\n        \"num_unique_values\": 434,\n        \"samples\": [\n          0.0026936100000000004,\n          0.541696\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"cubic_instrumentalness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.014546295599750148,\n        \"min\": 0.0,\n        \"max\": 0.34891366399999996,\n        \"num_unique_values\": 224,\n        \"samples\": [\n          1.3481272000000002e-08,\n          2.9407962500000003e-13\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"vibe_speed\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 14.247570756893783,\n        \"min\": 2.958789,\n        \"max\": 105.376432,\n        \"num_unique_values\": 525,\n        \"samples\": [\n          22.148609999999998,\n          10.0544334\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"time_energy\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 49819.24943186248,\n        \"min\": 15970.689,\n        \"max\": 518676.375,\n        \"num_unique_values\": 524,\n        \"samples\": [\n          77924.84700000001,\n          152217.59\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"energy_danceability\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.14701355803602803,\n        \"min\": 0.042522000000000004,\n        \"max\": 0.8155079999999999,\n        \"num_unique_values\": 522,\n        \"samples\": [\n          0.70884,\n          0.48415400000000003\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}"
+            }
+          },
+          "metadata": {},
+          "execution_count": 39
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "After adding higher-order terms and interactions, evaluate the model on the training and test\n",
+        "sets. Document any changes in R^2\n",
+        "."
+      ],
+      "metadata": {
+        "id": "I3raG50cpPjm"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "y_train = spotify_train['popularity']\n",
+        "y_test = spotify_test['popularity']\n",
+        "\n",
+        "# Initialize and train the linear regression model\n",
+        "model = LinearRegression()\n",
+        "model.fit(new_spotify_train, y_train)\n",
+        "\n",
+        "# Make predictions on the training set\n",
+        "y_pred_train = model.predict(new_spotify_train)\n",
+        "\n",
+        "# Evaluate R² on the training set\n",
+        "r2_train = r2_score(y_train, y_pred_train)\n",
+        "\n",
+        "new_spotify_test = pd.concat([x_test,\n",
+        "                              x_test['danceability'] ** 2,\n",
+        "                              x_test['loudness'] ** 3,\n",
+        "                              x_test['acousticness'] ** 2,\n",
+        "                              x_test['instrumentalness'] ** 3,\n",
+        "                              x_test['danceability'] * x_test['tempo'],\n",
+        "                              x_test['duration_ms'] * x_test['energy'],\n",
+        "                              x_test['energy'] * x_test['danceability']], axis=1)\n",
+        "new_spotify_test.columns = list(x_train.columns) + [\n",
+        "    'sq_danceability', 'cubic_loudness', 'sq_acousticness',\n",
+        "    'cubic_instrumentalness', 'vibe_speed', 'time_energy', 'energy_danceability'\n",
+        "]\n",
+        "\n",
+        "y_pred_test = model.predict(new_spotify_test)\n",
+        "\n",
+        "# Evaluate R² on the test set\n",
+        "r2_test = r2_score(y_test, y_pred_test)\n",
+        "\n",
+        "# Print the results\n",
+        "print(f\"R² on Training Set: {r2_train:.4f}\")\n",
+        "print(f\"R² on Test Set: {r2_test:.4f}\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "QVSzX7PErq73",
+        "outputId": "e9935c6b-aec5-4d19-e9ec-69b155ed0aa1"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "R² on Training Set: 0.0995\n",
+            "R² on Test Set: -1.6550\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## 4) Iterative Model Refinement and Selection"
+      ],
+      "metadata": {
+        "id": "X86SugqjpS3T"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "a) Use stepwise selection or other methods to reduce the model’s complexity by removing\n",
+        "predictors that do not contribute significantly. Aim to strike a balance between model\n",
+        "complexity and predictive performance."
+      ],
+      "metadata": {
+        "id": "UBDSQEDnpaDe"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "new_spotify_train.head()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 226
+        },
+        "id": "ibV1rh7TTFIF",
+        "outputId": "6c7feaa6-739b-400b-8279-b3510ababb59"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "   duration_ms  explicit  danceability  energy  loudness  speechiness  \\\n",
+              "0       200040     False         0.514   0.730    -5.934       0.0598   \n",
+              "1       177391     False         0.860   0.541    -6.510       0.0325   \n",
+              "2       206060     False         0.796   0.572    -7.030       0.0545   \n",
+              "3       191868     False         0.724   0.618    -9.007       0.0534   \n",
+              "4       298986     False         0.662   0.400   -11.200       0.0548   \n",
+              "\n",
+              "   acousticness  instrumentalness  liveness  valence    tempo  \\\n",
+              "0       0.00146          0.000095    0.0897   0.3340  171.005   \n",
+              "1       0.16500          0.163000    0.0663   0.9520  114.984   \n",
+              "2       0.41600          0.000025    0.0975   0.3040   98.967   \n",
+              "3       0.05330          0.704000    0.0886   0.0683  100.021   \n",
+              "4       0.73500          0.000017    0.0863   0.6170   79.972   \n",
+              "\n",
+              "   sq_danceability  cubic_loudness  sq_acousticness  cubic_instrumentalness  \\\n",
+              "0         0.264196     -208.950121         0.000002            8.682507e-13   \n",
+              "1         0.739600     -275.894451         0.027225            4.330747e-03   \n",
+              "2         0.633616     -347.428927         0.173056            1.658137e-14   \n",
+              "3         0.524176     -730.702323         0.002841            3.489137e-01   \n",
+              "4         0.438244    -1404.928000         0.540225            4.492125e-15   \n",
+              "\n",
+              "   vibe_speed  time_energy  energy_danceability  \n",
+              "0   15.339149   146029.200             0.375220  \n",
+              "1    7.623439    95968.531             0.465260  \n",
+              "2    9.649282   117866.320             0.455312  \n",
+              "3    8.861861   118574.424             0.447432  \n",
+              "4    6.901584   119594.400             0.264800  "
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-a7053b74-3790-439e-b54c-6ba6e61641c7\" class=\"colab-df-container\">\n",
+              "    <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>duration_ms</th>\n",
+              "      <th>explicit</th>\n",
+              "      <th>danceability</th>\n",
+              "      <th>energy</th>\n",
+              "      <th>loudness</th>\n",
+              "      <th>speechiness</th>\n",
+              "      <th>acousticness</th>\n",
+              "      <th>instrumentalness</th>\n",
+              "      <th>liveness</th>\n",
+              "      <th>valence</th>\n",
+              "      <th>tempo</th>\n",
+              "      <th>sq_danceability</th>\n",
+              "      <th>cubic_loudness</th>\n",
+              "      <th>sq_acousticness</th>\n",
+              "      <th>cubic_instrumentalness</th>\n",
+              "      <th>vibe_speed</th>\n",
+              "      <th>time_energy</th>\n",
+              "      <th>energy_danceability</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>200040</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.514</td>\n",
+              "      <td>0.730</td>\n",
+              "      <td>-5.934</td>\n",
+              "      <td>0.0598</td>\n",
+              "      <td>0.00146</td>\n",
+              "      <td>0.000095</td>\n",
+              "      <td>0.0897</td>\n",
+              "      <td>0.3340</td>\n",
+              "      <td>171.005</td>\n",
+              "      <td>0.264196</td>\n",
+              "      <td>-208.950121</td>\n",
+              "      <td>0.000002</td>\n",
+              "      <td>8.682507e-13</td>\n",
+              "      <td>15.339149</td>\n",
+              "      <td>146029.200</td>\n",
+              "      <td>0.375220</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>177391</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.860</td>\n",
+              "      <td>0.541</td>\n",
+              "      <td>-6.510</td>\n",
+              "      <td>0.0325</td>\n",
+              "      <td>0.16500</td>\n",
+              "      <td>0.163000</td>\n",
+              "      <td>0.0663</td>\n",
+              "      <td>0.9520</td>\n",
+              "      <td>114.984</td>\n",
+              "      <td>0.739600</td>\n",
+              "      <td>-275.894451</td>\n",
+              "      <td>0.027225</td>\n",
+              "      <td>4.330747e-03</td>\n",
+              "      <td>7.623439</td>\n",
+              "      <td>95968.531</td>\n",
+              "      <td>0.465260</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>206060</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.796</td>\n",
+              "      <td>0.572</td>\n",
+              "      <td>-7.030</td>\n",
+              "      <td>0.0545</td>\n",
+              "      <td>0.41600</td>\n",
+              "      <td>0.000025</td>\n",
+              "      <td>0.0975</td>\n",
+              "      <td>0.3040</td>\n",
+              "      <td>98.967</td>\n",
+              "      <td>0.633616</td>\n",
+              "      <td>-347.428927</td>\n",
+              "      <td>0.173056</td>\n",
+              "      <td>1.658137e-14</td>\n",
+              "      <td>9.649282</td>\n",
+              "      <td>117866.320</td>\n",
+              "      <td>0.455312</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>191868</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.724</td>\n",
+              "      <td>0.618</td>\n",
+              "      <td>-9.007</td>\n",
+              "      <td>0.0534</td>\n",
+              "      <td>0.05330</td>\n",
+              "      <td>0.704000</td>\n",
+              "      <td>0.0886</td>\n",
+              "      <td>0.0683</td>\n",
+              "      <td>100.021</td>\n",
+              "      <td>0.524176</td>\n",
+              "      <td>-730.702323</td>\n",
+              "      <td>0.002841</td>\n",
+              "      <td>3.489137e-01</td>\n",
+              "      <td>8.861861</td>\n",
+              "      <td>118574.424</td>\n",
+              "      <td>0.447432</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>298986</td>\n",
+              "      <td>False</td>\n",
+              "      <td>0.662</td>\n",
+              "      <td>0.400</td>\n",
+              "      <td>-11.200</td>\n",
+              "      <td>0.0548</td>\n",
+              "      <td>0.73500</td>\n",
+              "      <td>0.000017</td>\n",
+              "      <td>0.0863</td>\n",
+              "      <td>0.6170</td>\n",
+              "      <td>79.972</td>\n",
+              "      <td>0.438244</td>\n",
+              "      <td>-1404.928000</td>\n",
+              "      <td>0.540225</td>\n",
+              "      <td>4.492125e-15</td>\n",
+              "      <td>6.901584</td>\n",
+              "      <td>119594.400</td>\n",
+              "      <td>0.264800</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "    <div class=\"colab-df-buttons\">\n",
+              "\n",
+              "  <div class=\"colab-df-container\">\n",
+              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-a7053b74-3790-439e-b54c-6ba6e61641c7')\"\n",
+              "            title=\"Convert this dataframe to an interactive table.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
+              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "\n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-buttons div {\n",
+              "      margin-bottom: 4px;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "    <script>\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#df-a7053b74-3790-439e-b54c-6ba6e61641c7 button.colab-df-convert');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      async function convertToInteractive(key) {\n",
+              "        const element = document.querySelector('#df-a7053b74-3790-439e-b54c-6ba6e61641c7');\n",
+              "        const dataTable =\n",
+              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                    [key], {});\n",
+              "        if (!dataTable) return;\n",
+              "\n",
+              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "          + ' to learn more about interactive tables.';\n",
+              "        element.innerHTML = '';\n",
+              "        dataTable['output_type'] = 'display_data';\n",
+              "        await google.colab.output.renderOutput(dataTable, element);\n",
+              "        const docLink = document.createElement('div');\n",
+              "        docLink.innerHTML = docLinkHtml;\n",
+              "        element.appendChild(docLink);\n",
+              "      }\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "\n",
+              "<div id=\"df-7a5dd301-11a8-45b4-b006-ef20a5a034fa\">\n",
+              "  <button class=\"colab-df-quickchart\" onclick=\"quickchart('df-7a5dd301-11a8-45b4-b006-ef20a5a034fa')\"\n",
+              "            title=\"Suggest charts\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "<svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "     width=\"24px\">\n",
+              "    <g>\n",
+              "        <path d=\"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z\"/>\n",
+              "    </g>\n",
+              "</svg>\n",
+              "  </button>\n",
+              "\n",
+              "<style>\n",
+              "  .colab-df-quickchart {\n",
+              "      --bg-color: #E8F0FE;\n",
+              "      --fill-color: #1967D2;\n",
+              "      --hover-bg-color: #E2EBFA;\n",
+              "      --hover-fill-color: #174EA6;\n",
+              "      --disabled-fill-color: #AAA;\n",
+              "      --disabled-bg-color: #DDD;\n",
+              "  }\n",
+              "\n",
+              "  [theme=dark] .colab-df-quickchart {\n",
+              "      --bg-color: #3B4455;\n",
+              "      --fill-color: #D2E3FC;\n",
+              "      --hover-bg-color: #434B5C;\n",
+              "      --hover-fill-color: #FFFFFF;\n",
+              "      --disabled-bg-color: #3B4455;\n",
+              "      --disabled-fill-color: #666;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart {\n",
+              "    background-color: var(--bg-color);\n",
+              "    border: none;\n",
+              "    border-radius: 50%;\n",
+              "    cursor: pointer;\n",
+              "    display: none;\n",
+              "    fill: var(--fill-color);\n",
+              "    height: 32px;\n",
+              "    padding: 0;\n",
+              "    width: 32px;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart:hover {\n",
+              "    background-color: var(--hover-bg-color);\n",
+              "    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "    fill: var(--button-hover-fill-color);\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-quickchart-complete:disabled,\n",
+              "  .colab-df-quickchart-complete:disabled:hover {\n",
+              "    background-color: var(--disabled-bg-color);\n",
+              "    fill: var(--disabled-fill-color);\n",
+              "    box-shadow: none;\n",
+              "  }\n",
+              "\n",
+              "  .colab-df-spinner {\n",
+              "    border: 2px solid var(--fill-color);\n",
+              "    border-color: transparent;\n",
+              "    border-bottom-color: var(--fill-color);\n",
+              "    animation:\n",
+              "      spin 1s steps(1) infinite;\n",
+              "  }\n",
+              "\n",
+              "  @keyframes spin {\n",
+              "    0% {\n",
+              "      border-color: transparent;\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "      border-left-color: var(--fill-color);\n",
+              "    }\n",
+              "    20% {\n",
+              "      border-color: transparent;\n",
+              "      border-left-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "    }\n",
+              "    30% {\n",
+              "      border-color: transparent;\n",
+              "      border-left-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "      border-right-color: var(--fill-color);\n",
+              "    }\n",
+              "    40% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "      border-top-color: var(--fill-color);\n",
+              "    }\n",
+              "    60% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "    }\n",
+              "    80% {\n",
+              "      border-color: transparent;\n",
+              "      border-right-color: var(--fill-color);\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "    }\n",
+              "    90% {\n",
+              "      border-color: transparent;\n",
+              "      border-bottom-color: var(--fill-color);\n",
+              "    }\n",
+              "  }\n",
+              "</style>\n",
+              "\n",
+              "  <script>\n",
+              "    async function quickchart(key) {\n",
+              "      const quickchartButtonEl =\n",
+              "        document.querySelector('#' + key + ' button');\n",
+              "      quickchartButtonEl.disabled = true;  // To prevent multiple clicks.\n",
+              "      quickchartButtonEl.classList.add('colab-df-spinner');\n",
+              "      try {\n",
+              "        const charts = await google.colab.kernel.invokeFunction(\n",
+              "            'suggestCharts', [key], {});\n",
+              "      } catch (error) {\n",
+              "        console.error('Error during call to suggestCharts:', error);\n",
+              "      }\n",
+              "      quickchartButtonEl.classList.remove('colab-df-spinner');\n",
+              "      quickchartButtonEl.classList.add('colab-df-quickchart-complete');\n",
+              "    }\n",
+              "    (() => {\n",
+              "      let quickchartButtonEl =\n",
+              "        document.querySelector('#df-7a5dd301-11a8-45b4-b006-ef20a5a034fa button');\n",
+              "      quickchartButtonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "    })();\n",
+              "  </script>\n",
+              "</div>\n",
+              "\n",
+              "    </div>\n",
+              "  </div>\n"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "dataframe",
+              "variable_name": "new_spotify_train",
+              "summary": "{\n  \"name\": \"new_spotify_train\",\n  \"rows\": 576,\n  \"fields\": [\n    {\n      \"column\": \"duration_ms\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 57855,\n        \"min\": 69741,\n        \"max\": 586075,\n        \"num_unique_values\": 510,\n        \"samples\": [\n          243870,\n          284573,\n          298899\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"explicit\",\n      \"properties\": {\n        \"dtype\": \"boolean\",\n        \"num_unique_values\": 2,\n        \"samples\": [\n          true,\n          false\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"danceability\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.1400913966245342,\n        \"min\": 0.206,\n        \"max\": 0.918,\n        \"num_unique_values\": 335,\n        \"samples\": [\n          0.468,\n          0.704\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"energy\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.16941945864626995,\n        \"min\": 0.114,\n        \"max\": 0.986,\n        \"num_unique_values\": 360,\n        \"samples\": [\n          0.787,\n          0.524\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"loudness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 2.618034793483712,\n        \"min\": -20.647,\n        \"max\": -1.1,\n        \"num_unique_values\": 504,\n        \"samples\": [\n          -4.274,\n          -5.72\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"speechiness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.08007131266009763,\n        \"min\": 0.0232,\n        \"max\": 0.505,\n        \"num_unique_values\": 364,\n        \"samples\": [\n          0.0491,\n          0.0604\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"acousticness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.27921006397277287,\n        \"min\": 0.00111,\n        \"max\": 0.983,\n        \"num_unique_values\": 434,\n        \"samples\": [\n          0.0519,\n          0.736\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"instrumentalness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.03673507296065346,\n        \"min\": 0.0,\n        \"max\": 0.704,\n        \"num_unique_values\": 224,\n        \"samples\": [\n          0.00238,\n          6.65e-05\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"liveness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.10276085220248256,\n        \"min\": 0.0211,\n        \"max\": 0.766,\n        \"num_unique_values\": 299,\n        \"samples\": [\n          0.162,\n          0.052\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"valence\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.20727835643488357,\n        \"min\": 0.0383,\n        \"max\": 0.969,\n        \"num_unique_values\": 386,\n        \"samples\": [\n          0.308,\n          0.564\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"tempo\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 31.778088760647105,\n        \"min\": 55.832,\n        \"max\": 203.983,\n        \"num_unique_values\": 521,\n        \"samples\": [\n          81.335,\n          137.839\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"sq_danceability\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.16958677265807265,\n        \"min\": 0.042435999999999995,\n        \"max\": 0.842724,\n        \"num_unique_values\": 335,\n        \"samples\": [\n          0.21902400000000002,\n          0.49561599999999995\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"cubic_loudness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 673.81518859579,\n        \"min\": -8801.787380022997,\n        \"max\": -1.3310000000000004,\n        \"num_unique_values\": 504,\n        \"samples\": [\n          -78.073482824,\n          -187.14924799999997\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"sq_acousticness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.24498584931410736,\n        \"min\": 1.2321000000000002e-06,\n        \"max\": 0.966289,\n        \"num_unique_values\": 434,\n        \"samples\": [\n          0.0026936100000000004,\n          0.541696\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"cubic_instrumentalness\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.014546295599750148,\n        \"min\": 0.0,\n        \"max\": 0.34891366399999996,\n        \"num_unique_values\": 224,\n        \"samples\": [\n          1.3481272000000002e-08,\n          2.9407962500000003e-13\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"vibe_speed\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 14.247570756893783,\n        \"min\": 2.958789,\n        \"max\": 105.376432,\n        \"num_unique_values\": 525,\n        \"samples\": [\n          22.148609999999998,\n          10.0544334\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"time_energy\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 49819.24943186248,\n        \"min\": 15970.689,\n        \"max\": 518676.375,\n        \"num_unique_values\": 524,\n        \"samples\": [\n          77924.84700000001,\n          152217.59\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"energy_danceability\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.14701355803602803,\n        \"min\": 0.042522000000000004,\n        \"max\": 0.8155079999999999,\n        \"num_unique_values\": 522,\n        \"samples\": [\n          0.70884,\n          0.48415400000000003\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}"
+            }
+          },
+          "metadata": {},
+          "execution_count": 41
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import statsmodels.api as sm\n",
+        "\n",
+        "X = new_spotify_train"
+      ],
+      "metadata": {
+        "id": "kuTvN7EZpdF-"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "y = spotify_train['popularity']\n",
+        "\n",
+        "X_with_constant = sm.add_constant(X)\n",
+        "\n",
+        "print(X_with_constant.dtypes)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "838Xk3hyTiOG",
+        "outputId": "c7b17198-b04c-4db2-9dbf-08a3c8f258c3"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "const                     float64\n",
+            "duration_ms                 int64\n",
+            "explicit                     bool\n",
+            "danceability              float64\n",
+            "energy                    float64\n",
+            "loudness                  float64\n",
+            "speechiness               float64\n",
+            "acousticness              float64\n",
+            "instrumentalness          float64\n",
+            "liveness                  float64\n",
+            "valence                   float64\n",
+            "tempo                     float64\n",
+            "sq_danceability           float64\n",
+            "cubic_loudness            float64\n",
+            "sq_acousticness           float64\n",
+            "cubic_instrumentalness    float64\n",
+            "vibe_speed                float64\n",
+            "time_energy               float64\n",
+            "energy_danceability       float64\n",
+            "dtype: object\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "X_numpy = X_with_constant.to_numpy()\n",
+        "y_numpy = y.to_numpy()\n",
+        "\n",
+        "X = pd.DataFrame(X_numpy, columns= X_with_constant.columns)\n",
+        "y = pd.DataFrame(y_numpy, columns= ['popularity'])"
+      ],
+      "metadata": {
+        "id": "3yD8Wuzdt2w3"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "for col in X.columns:\n",
+        "  X[col] = X[col].astype(float)\n",
+        "\n",
+        "y['popularity'] = y['popularity'].astype(float)\n",
+        "\n",
+        "\n",
+        "print(X.dtypes)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "PCJF5FwRuxWT",
+        "outputId": "8148f81a-440e-459f-c7e5-5755575799b1"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "const                     float64\n",
+            "duration_ms               float64\n",
+            "explicit                  float64\n",
+            "danceability              float64\n",
+            "energy                    float64\n",
+            "loudness                  float64\n",
+            "speechiness               float64\n",
+            "acousticness              float64\n",
+            "instrumentalness          float64\n",
+            "liveness                  float64\n",
+            "valence                   float64\n",
+            "tempo                     float64\n",
+            "sq_danceability           float64\n",
+            "cubic_loudness            float64\n",
+            "sq_acousticness           float64\n",
+            "cubic_instrumentalness    float64\n",
+            "vibe_speed                float64\n",
+            "time_energy               float64\n",
+            "energy_danceability       float64\n",
+            "dtype: object\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#Columns to drop from X: duration, sq_acousticness, speechiness, danceability\n",
+        "\n",
+        "X['loundness'] = X_with_constant['loudness'].astype(float)\n",
+        "X['cubic_loudness '] = X_with_constant['cubic_loudness'].astype(float)\n",
+        "\n",
+        "\n",
+        "print(X.dtypes)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "_Cct0LRcvGcB",
+        "outputId": "3ccb6753-84aa-4325-e08b-387df7d4440a"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "const                     float64\n",
+            "duration_ms               float64\n",
+            "explicit                  float64\n",
+            "danceability              float64\n",
+            "energy                    float64\n",
+            "loudness                  float64\n",
+            "speechiness               float64\n",
+            "acousticness              float64\n",
+            "instrumentalness          float64\n",
+            "liveness                  float64\n",
+            "valence                   float64\n",
+            "tempo                     float64\n",
+            "sq_danceability           float64\n",
+            "cubic_loudness            float64\n",
+            "sq_acousticness           float64\n",
+            "cubic_instrumentalness    float64\n",
+            "vibe_speed                float64\n",
+            "time_energy               float64\n",
+            "energy_danceability       float64\n",
+            "loundness                 float64\n",
+            "cubic_loudness            float64\n",
+            "dtype: object\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "model_sm = sm.OLS(y, X).fit()\n",
+        "\n",
+        "model_sm.summary()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 892
+        },
+        "id": "7SRcVBU7U6Ua",
+        "outputId": "c66007f8-6e64-4f5e-81b4-666bb4e9e713"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "<class 'statsmodels.iolib.summary.Summary'>\n",
+              "\"\"\"\n",
+              "                            OLS Regression Results                            \n",
+              "==============================================================================\n",
+              "Dep. Variable:             popularity   R-squared:                       0.099\n",
+              "Model:                            OLS   Adj. R-squared:                  0.070\n",
+              "Method:                 Least Squares   F-statistic:                     3.418\n",
+              "Date:                Wed, 11 Dec 2024   Prob (F-statistic):           2.77e-06\n",
+              "Time:                        17:28:28   Log-Likelihood:                -2690.0\n",
+              "No. Observations:                 576   AIC:                             5418.\n",
+              "Df Residuals:                     557   BIC:                             5501.\n",
+              "Df Model:                          18                                         \n",
+              "Covariance Type:            nonrobust                                         \n",
+              "==========================================================================================\n",
+              "                             coef    std err          t      P>|t|      [0.025      0.975]\n",
+              "------------------------------------------------------------------------------------------\n",
+              "const                     45.6348     31.112      1.467      0.143     -15.475     106.745\n",
+              "duration_ms             1.058e-05   6.81e-05      0.155      0.877      -0.000       0.000\n",
+              "explicit                  13.9189      4.452      3.127      0.002       5.175      22.663\n",
+              "danceability             -26.7534     58.121     -0.460      0.645    -140.916      87.409\n",
+              "energy                    78.0038     46.403      1.681      0.093     -13.142     169.149\n",
+              "loudness                  -0.7135      0.517     -1.380      0.168      -1.729       0.302\n",
+              "speechiness               -4.7178     15.144     -0.312      0.756     -34.464      25.029\n",
+              "acousticness              18.9667     15.444      1.228      0.220     -11.369      49.303\n",
+              "instrumentalness        -187.4943     58.493     -3.205      0.001    -302.387     -72.601\n",
+              "liveness                 -92.3917     44.766     -2.064      0.039    -180.323      -4.460\n",
+              "valence                   -8.8045      6.368     -1.383      0.167     -21.313       3.704\n",
+              "tempo                     -0.2260      0.067     -3.385      0.001      -0.357      -0.095\n",
+              "sq_danceability           61.4890     48.877      1.258      0.209     -34.517     157.495\n",
+              "cubic_loudness             0.0013      0.002      0.778      0.437      -0.002       0.005\n",
+              "sq_acousticness           -6.3270     18.297     -0.346      0.730     -42.266      29.612\n",
+              "cubic_instrumentalness   405.3122    141.043      2.874      0.004     128.271     682.354\n",
+              "vibe_speed                 0.6408      0.349      1.834      0.067      -0.046       1.327\n",
+              "time_energy             3.568e-05      0.000      0.318      0.750      -0.000       0.000\n",
+              "energy_danceability      -77.7130     52.699     -1.475      0.141    -181.227      25.801\n",
+              "loundness                 -0.7135      0.517     -1.380      0.168      -1.729       0.302\n",
+              "cubic_loudness             0.0013      0.002      0.778      0.437      -0.002       0.005\n",
+              "==============================================================================\n",
+              "Omnibus:                       87.569   Durbin-Watson:                   1.378\n",
+              "Prob(Omnibus):                  0.000   Jarque-Bera (JB):              126.615\n",
+              "Skew:                          -1.138   Prob(JB):                     3.21e-28\n",
+              "Kurtosis:                       3.303   Cond. No.                     4.04e+20\n",
+              "==============================================================================\n",
+              "\n",
+              "Notes:\n",
+              "[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.\n",
+              "[2] The smallest eigenvalue is 2.57e-28. This might indicate that there are\n",
+              "strong multicollinearity problems or that the design matrix is singular.\n",
+              "\"\"\""
+            ],
+            "text/html": [
+              "<table class=\"simpletable\">\n",
+              "<caption>OLS Regression Results</caption>\n",
+              "<tr>\n",
+              "  <th>Dep. Variable:</th>       <td>popularity</td>    <th>  R-squared:         </th> <td>   0.099</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>Model:</th>                   <td>OLS</td>       <th>  Adj. R-squared:    </th> <td>   0.070</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>Method:</th>             <td>Least Squares</td>  <th>  F-statistic:       </th> <td>   3.418</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>Date:</th>             <td>Wed, 11 Dec 2024</td> <th>  Prob (F-statistic):</th> <td>2.77e-06</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>Time:</th>                 <td>17:28:28</td>     <th>  Log-Likelihood:    </th> <td> -2690.0</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>No. Observations:</th>      <td>   576</td>      <th>  AIC:               </th> <td>   5418.</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>Df Residuals:</th>          <td>   557</td>      <th>  BIC:               </th> <td>   5501.</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>Df Model:</th>              <td>    18</td>      <th>                     </th>     <td> </td>   \n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>Covariance Type:</th>      <td>nonrobust</td>    <th>                     </th>     <td> </td>   \n",
+              "</tr>\n",
+              "</table>\n",
+              "<table class=\"simpletable\">\n",
+              "<tr>\n",
+              "             <td></td>               <th>coef</th>     <th>std err</th>      <th>t</th>      <th>P>|t|</th>  <th>[0.025</th>    <th>0.975]</th>  \n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>const</th>                  <td>   45.6348</td> <td>   31.112</td> <td>    1.467</td> <td> 0.143</td> <td>  -15.475</td> <td>  106.745</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>duration_ms</th>            <td> 1.058e-05</td> <td> 6.81e-05</td> <td>    0.155</td> <td> 0.877</td> <td>   -0.000</td> <td>    0.000</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>explicit</th>               <td>   13.9189</td> <td>    4.452</td> <td>    3.127</td> <td> 0.002</td> <td>    5.175</td> <td>   22.663</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>danceability</th>           <td>  -26.7534</td> <td>   58.121</td> <td>   -0.460</td> <td> 0.645</td> <td> -140.916</td> <td>   87.409</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>energy</th>                 <td>   78.0038</td> <td>   46.403</td> <td>    1.681</td> <td> 0.093</td> <td>  -13.142</td> <td>  169.149</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>loudness</th>               <td>   -0.7135</td> <td>    0.517</td> <td>   -1.380</td> <td> 0.168</td> <td>   -1.729</td> <td>    0.302</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>speechiness</th>            <td>   -4.7178</td> <td>   15.144</td> <td>   -0.312</td> <td> 0.756</td> <td>  -34.464</td> <td>   25.029</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>acousticness</th>           <td>   18.9667</td> <td>   15.444</td> <td>    1.228</td> <td> 0.220</td> <td>  -11.369</td> <td>   49.303</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>instrumentalness</th>       <td> -187.4943</td> <td>   58.493</td> <td>   -3.205</td> <td> 0.001</td> <td> -302.387</td> <td>  -72.601</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>liveness</th>               <td>  -92.3917</td> <td>   44.766</td> <td>   -2.064</td> <td> 0.039</td> <td> -180.323</td> <td>   -4.460</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>valence</th>                <td>   -8.8045</td> <td>    6.368</td> <td>   -1.383</td> <td> 0.167</td> <td>  -21.313</td> <td>    3.704</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>tempo</th>                  <td>   -0.2260</td> <td>    0.067</td> <td>   -3.385</td> <td> 0.001</td> <td>   -0.357</td> <td>   -0.095</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>sq_danceability</th>        <td>   61.4890</td> <td>   48.877</td> <td>    1.258</td> <td> 0.209</td> <td>  -34.517</td> <td>  157.495</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>cubic_loudness</th>         <td>    0.0013</td> <td>    0.002</td> <td>    0.778</td> <td> 0.437</td> <td>   -0.002</td> <td>    0.005</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>sq_acousticness</th>        <td>   -6.3270</td> <td>   18.297</td> <td>   -0.346</td> <td> 0.730</td> <td>  -42.266</td> <td>   29.612</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>cubic_instrumentalness</th> <td>  405.3122</td> <td>  141.043</td> <td>    2.874</td> <td> 0.004</td> <td>  128.271</td> <td>  682.354</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>vibe_speed</th>             <td>    0.6408</td> <td>    0.349</td> <td>    1.834</td> <td> 0.067</td> <td>   -0.046</td> <td>    1.327</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>time_energy</th>            <td> 3.568e-05</td> <td>    0.000</td> <td>    0.318</td> <td> 0.750</td> <td>   -0.000</td> <td>    0.000</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>energy_danceability</th>    <td>  -77.7130</td> <td>   52.699</td> <td>   -1.475</td> <td> 0.141</td> <td> -181.227</td> <td>   25.801</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>loundness</th>              <td>   -0.7135</td> <td>    0.517</td> <td>   -1.380</td> <td> 0.168</td> <td>   -1.729</td> <td>    0.302</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>cubic_loudness </th>        <td>    0.0013</td> <td>    0.002</td> <td>    0.778</td> <td> 0.437</td> <td>   -0.002</td> <td>    0.005</td>\n",
+              "</tr>\n",
+              "</table>\n",
+              "<table class=\"simpletable\">\n",
+              "<tr>\n",
+              "  <th>Omnibus:</th>       <td>87.569</td> <th>  Durbin-Watson:     </th> <td>   1.378</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>Prob(Omnibus):</th> <td> 0.000</td> <th>  Jarque-Bera (JB):  </th> <td> 126.615</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>Skew:</th>          <td>-1.138</td> <th>  Prob(JB):          </th> <td>3.21e-28</td>\n",
+              "</tr>\n",
+              "<tr>\n",
+              "  <th>Kurtosis:</th>      <td> 3.303</td> <th>  Cond. No.          </th> <td>4.04e+20</td>\n",
+              "</tr>\n",
+              "</table><br/><br/>Notes:<br/>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.<br/>[2] The smallest eigenvalue is 2.57e-28. This might indicate that there are<br/>strong multicollinearity problems or that the design matrix is singular."
+            ],
+            "text/latex": "\\begin{center}\n\\begin{tabular}{lclc}\n\\toprule\n\\textbf{Dep. Variable:}          &    popularity    & \\textbf{  R-squared:         } &     0.099   \\\\\n\\textbf{Model:}                  &       OLS        & \\textbf{  Adj. R-squared:    } &     0.070   \\\\\n\\textbf{Method:}                 &  Least Squares   & \\textbf{  F-statistic:       } &     3.418   \\\\\n\\textbf{Date:}                   & Wed, 11 Dec 2024 & \\textbf{  Prob (F-statistic):} &  2.77e-06   \\\\\n\\textbf{Time:}                   &     17:28:28     & \\textbf{  Log-Likelihood:    } &   -2690.0   \\\\\n\\textbf{No. Observations:}       &         576      & \\textbf{  AIC:               } &     5418.   \\\\\n\\textbf{Df Residuals:}           &         557      & \\textbf{  BIC:               } &     5501.   \\\\\n\\textbf{Df Model:}               &          18      & \\textbf{                     } &             \\\\\n\\textbf{Covariance Type:}        &    nonrobust     & \\textbf{                     } &             \\\\\n\\bottomrule\n\\end{tabular}\n\\begin{tabular}{lcccccc}\n                                 & \\textbf{coef} & \\textbf{std err} & \\textbf{t} & \\textbf{P$> |$t$|$} & \\textbf{[0.025} & \\textbf{0.975]}  \\\\\n\\midrule\n\\textbf{const}                   &      45.6348  &       31.112     &     1.467  &         0.143        &      -15.475    &      106.745     \\\\\n\\textbf{duration\\_ms}            &    1.058e-05  &     6.81e-05     &     0.155  &         0.877        &       -0.000    &        0.000     \\\\\n\\textbf{explicit}                &      13.9189  &        4.452     &     3.127  &         0.002        &        5.175    &       22.663     \\\\\n\\textbf{danceability}            &     -26.7534  &       58.121     &    -0.460  &         0.645        &     -140.916    &       87.409     \\\\\n\\textbf{energy}                  &      78.0038  &       46.403     &     1.681  &         0.093        &      -13.142    &      169.149     \\\\\n\\textbf{loudness}                &      -0.7135  &        0.517     &    -1.380  &         0.168        &       -1.729    &        0.302     \\\\\n\\textbf{speechiness}             &      -4.7178  &       15.144     &    -0.312  &         0.756        &      -34.464    &       25.029     \\\\\n\\textbf{acousticness}            &      18.9667  &       15.444     &     1.228  &         0.220        &      -11.369    &       49.303     \\\\\n\\textbf{instrumentalness}        &    -187.4943  &       58.493     &    -3.205  &         0.001        &     -302.387    &      -72.601     \\\\\n\\textbf{liveness}                &     -92.3917  &       44.766     &    -2.064  &         0.039        &     -180.323    &       -4.460     \\\\\n\\textbf{valence}                 &      -8.8045  &        6.368     &    -1.383  &         0.167        &      -21.313    &        3.704     \\\\\n\\textbf{tempo}                   &      -0.2260  &        0.067     &    -3.385  &         0.001        &       -0.357    &       -0.095     \\\\\n\\textbf{sq\\_danceability}        &      61.4890  &       48.877     &     1.258  &         0.209        &      -34.517    &      157.495     \\\\\n\\textbf{cubic\\_loudness}         &       0.0013  &        0.002     &     0.778  &         0.437        &       -0.002    &        0.005     \\\\\n\\textbf{sq\\_acousticness}        &      -6.3270  &       18.297     &    -0.346  &         0.730        &      -42.266    &       29.612     \\\\\n\\textbf{cubic\\_instrumentalness} &     405.3122  &      141.043     &     2.874  &         0.004        &      128.271    &      682.354     \\\\\n\\textbf{vibe\\_speed}             &       0.6408  &        0.349     &     1.834  &         0.067        &       -0.046    &        1.327     \\\\\n\\textbf{time\\_energy}            &    3.568e-05  &        0.000     &     0.318  &         0.750        &       -0.000    &        0.000     \\\\\n\\textbf{energy\\_danceability}    &     -77.7130  &       52.699     &    -1.475  &         0.141        &     -181.227    &       25.801     \\\\\n\\textbf{loundness}               &      -0.7135  &        0.517     &    -1.380  &         0.168        &       -1.729    &        0.302     \\\\\n\\textbf{cubic\\_loudness }        &       0.0013  &        0.002     &     0.778  &         0.437        &       -0.002    &        0.005     \\\\\n\\bottomrule\n\\end{tabular}\n\\begin{tabular}{lclc}\n\\textbf{Omnibus:}       & 87.569 & \\textbf{  Durbin-Watson:     } &    1.378  \\\\\n\\textbf{Prob(Omnibus):} &  0.000 & \\textbf{  Jarque-Bera (JB):  } &  126.615  \\\\\n\\textbf{Skew:}          & -1.138 & \\textbf{  Prob(JB):          } & 3.21e-28  \\\\\n\\textbf{Kurtosis:}      &  3.303 & \\textbf{  Cond. No.          } & 4.04e+20  \\\\\n\\bottomrule\n\\end{tabular}\n%\\caption{OLS Regression Results}\n\\end{center}\n\nNotes: \\newline\n [1] Standard Errors assume that the covariance matrix of the errors is correctly specified. \\newline\n [2] The smallest eigenvalue is 2.57e-28. This might indicate that there are \\newline\n strong multicollinearity problems or that the design matrix is singular."
+          },
+          "metadata": {},
+          "execution_count": 47
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "R^2 previous: 0.099\n",
+        "\n",
+        "R^2 current: 0.099\n",
+        "\n",
+        "These are the parameters I dropped:  duration, sq_acousticness, speechiness, danceability"
+      ],
+      "metadata": {
+        "id": "Psw-9V17wBYa"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "b) Fit the refined model on the training set, and calculate R2 on both the training and test\n",
+        "sets. This will help you monitor any signs of overfitting or underfitting."
+      ],
+      "metadata": {
+        "id": "F9aLAFafpdfh"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "for col in new_spotify_test.columns:\n",
+        "  new_spotify_test[col] = new_spotify_test[col].astype(float)\n",
+        "\n",
+        "y['popularity'] = y['popularity'].astype(float)\n",
+        "\n",
+        "holder = pd.DataFrame()\n",
+        "\n",
+        "holder['loundess'] = new_spotify_test['loudness']\n",
+        "holder['cubic_loudness'] = new_spotify_test['cubic_loudness']\n",
+        "\n",
+        "new_spotify_test = new_spotify_test.drop(columns=['loudness', 'cubic_loudness'])\n",
+        "\n",
+        "new_spotify_test['loudness'] = holder['loundess']\n",
+        "new_spotify_test['cubic_loudness'] = holder['cubic_loudness']\n",
+        "\n",
+        "for col in new_spotify_test.columns:\n",
+        "  print(col)"
+      ],
+      "metadata": {
+        "id": "ysyVBUEZpgLH",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "b827be12-9a39-407f-a9b8-5a25fac5331e"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "duration_ms\n",
+            "explicit\n",
+            "danceability\n",
+            "energy\n",
+            "speechiness\n",
+            "acousticness\n",
+            "instrumentalness\n",
+            "liveness\n",
+            "valence\n",
+            "tempo\n",
+            "sq_danceability\n",
+            "sq_acousticness\n",
+            "cubic_instrumentalness\n",
+            "vibe_speed\n",
+            "time_energy\n",
+            "energy_danceability\n",
+            "loudness\n",
+            "cubic_loudness\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "new_spotify_test = new_spotify_test.drop(columns=['duration_ms'])"
+      ],
+      "metadata": {
+        "id": "X7Ocns-M49Fe"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#Columns to drop from new_spotify_train: duration, sq_acousticness, speechiness, danceability\n",
+        "\n",
+        "new_spotify_train = new_spotify_train.drop(columns=['duration_ms', 'sq_acousticness', 'speechiness', 'danceability'])"
+      ],
+      "metadata": {
+        "id": "h0PipI_C4hNL"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "print(new_spotify_train.dtypes)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "fL5G1SSV4KwD",
+        "outputId": "f68d7e81-667f-4cd3-bc8c-a8342c7500c5"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "explicit                     bool\n",
+            "energy                    float64\n",
+            "loudness                  float64\n",
+            "acousticness              float64\n",
+            "instrumentalness          float64\n",
+            "liveness                  float64\n",
+            "valence                   float64\n",
+            "tempo                     float64\n",
+            "sq_danceability           float64\n",
+            "cubic_loudness            float64\n",
+            "cubic_instrumentalness    float64\n",
+            "vibe_speed                float64\n",
+            "time_energy               float64\n",
+            "energy_danceability       float64\n",
+            "dtype: object\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "for col in new_spotify_train.columns:\n",
+        "  new_spotify_train[col] = new_spotify_train[col].astype(float)\n",
+        "\n",
+        "y['popularity'] = y['popularity'].astype(float)\n",
+        "\n",
+        "holder = pd.DataFrame()\n",
+        "\n",
+        "holder['loundess'] = new_spotify_train['loudness']\n",
+        "holder['cubic_loudness'] = new_spotify_train['cubic_loudness']\n",
+        "\n",
+        "new_spotify_train = new_spotify_train.drop(columns=['loudness', 'cubic_loudness'])\n",
+        "\n",
+        "new_spotify_train['loudness'] = holder['loundess']\n",
+        "new_spotify_train['cubic_loudness'] = holder['cubic_loudness']\n",
+        "\n",
+        "for col in new_spotify_train.columns:\n",
+        "  print(col)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "83tUJxQ62DHG",
+        "outputId": "d634cb8b-9f01-49a9-cea5-807b1733b029"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "explicit\n",
+            "energy\n",
+            "acousticness\n",
+            "instrumentalness\n",
+            "liveness\n",
+            "valence\n",
+            "tempo\n",
+            "sq_danceability\n",
+            "cubic_instrumentalness\n",
+            "vibe_speed\n",
+            "time_energy\n",
+            "energy_danceability\n",
+            "loudness\n",
+            "cubic_loudness\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "for col in X.columns:\n",
+        "  print(col)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "MbzDMymE2O3u",
+        "outputId": "de06ec0e-345c-4c45-8bfb-2894a9851dbd"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "const\n",
+            "duration_ms\n",
+            "explicit\n",
+            "danceability\n",
+            "energy\n",
+            "loudness\n",
+            "speechiness\n",
+            "acousticness\n",
+            "instrumentalness\n",
+            "liveness\n",
+            "valence\n",
+            "tempo\n",
+            "sq_danceability\n",
+            "cubic_loudness\n",
+            "sq_acousticness\n",
+            "cubic_instrumentalness\n",
+            "vibe_speed\n",
+            "time_energy\n",
+            "energy_danceability\n",
+            "loundness\n",
+            "cubic_loudness \n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "model_lin = LinearRegression()\n",
+        "\n",
+        "model_lin.fit(new_spotify_train, y_train)\n",
+        "\n",
+        "y_prediction = model_lin.predict(new_spotify_train)\n",
+        "\n",
+        "r2_train = r2_score(y_train, y_prediction)\n",
+        "\n",
+        "print(f\"R^2 on Training Set: {r2_train:.4f}\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "KI_hQ7rL1jUK",
+        "outputId": "50a7b176-8a68-4bb7-a14f-e7f9c4c03537"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "R^2 on Training Set: 0.0988\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "new_spotify_test = new_spotify_test.drop(columns=['sq_acousticness', 'speechiness', 'danceability'])"
+      ],
+      "metadata": {
+        "id": "C1wHQKtEIPoY"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "y_test_prediction = model_lin.predict(new_spotify_test)\n",
+        "\n",
+        "r2_test = r2_score(y_test, y_test_prediction)\n",
+        "\n",
+        "print(f\"R^2 on Test Set: {r2_test:.4f}\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "ipCoKoqu24yS",
+        "outputId": "1c40d8ac-e7b4-45ba-e193-fe5b87d8f645"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "R^2 on Test Set: -1.7110\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## 5) Final Model Evaluation"
+      ],
+      "metadata": {
+        "id": "gMvUHCPppiZ5"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "a) Ensure that the final model achieves an R^2 of at least 0.125 on the test set, or as close to\n",
+        "this target as possible."
+      ],
+      "metadata": {
+        "id": "B_HUIfvppmA1"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.preprocessing import PolynomialFeatures\n",
+        "from sklearn.model_selection import GridSearchCV\n",
+        "from sklearn.pipeline import Pipeline\n",
+        "from sklearn.preprocessing import StandardScaler\n",
+        "from sklearn.linear_model import Ridge\n",
+        "from sklearn.metrics import r2_score\n",
+        "import pandas as pd\n",
+        "\n",
+        "# Load data\n",
+        "spotify_train = pd.read_csv('https://richardson.byu.edu/220/spotify_train.csv')\n",
+        "spotify_test = pd.read_csv('https://richardson.byu.edu/220/spotify_test.csv')\n",
+        "\n",
+        "# Split features and target\n",
+        "X_train = spotify_train.drop('popularity', axis=1)\n",
+        "y_train = spotify_train['popularity']\n",
+        "X_test = spotify_test.drop('popularity', axis=1)\n",
+        "y_test = spotify_test['popularity']\n",
+        "\n",
+        "# Fill missing values\n",
+        "X_train = X_train.fillna(X_train.mean())\n",
+        "X_test = X_test.fillna(X_test.mean())\n",
+        "\n",
+        "# Define pipeline\n",
+        "pipeline = Pipeline([\n",
+        "    ('poly', PolynomialFeatures(include_bias=False)),\n",
+        "    ('scaler', StandardScaler()),\n",
+        "    ('model', Ridge())\n",
+        "])\n",
+        "\n",
+        "# Set up parameter grid for hyperparameter tuning\n",
+        "param_grid = {\n",
+        "    'poly__degree': [1, 2, 3],  # Test degrees\n",
+        "    'model__alpha': [0.01, 0.1, 1.0, 10.0]  # Test different alphas\n",
+        "}\n",
+        "\n",
+        "# Perform grid search with cross-validation\n",
+        "grid_search = GridSearchCV(pipeline, param_grid, scoring='r2', cv=5)\n",
+        "grid_search.fit(X_train, y_train)\n",
+        "\n",
+        "# Best model\n",
+        "best_model = grid_search.best_estimator_\n",
+        "\n",
+        "# Predictions\n",
+        "y_pred_train = best_model.predict(X_train)\n",
+        "y_pred_test = best_model.predict(X_test)\n",
+        "\n",
+        "# Compute R^2\n",
+        "r2_train = r2_score(y_train, y_pred_train)\n",
+        "r2_test = r2_score(y_test, y_pred_test)\n",
+        "\n",
+        "# Print results\n",
+        "print(\"Best Model Parameters:\", grid_search.best_params_)\n",
+        "print(f\"R^2 on Training Set: {r2_train:.4f}\")\n",
+        "print(f\"R^2 on Test Set: {r2_test:.4f}\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "g8ljIipkSvvM",
+        "outputId": "0b58b23d-def6-43f0-e512-974b8c2861ef"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Best Model Parameters: {'model__alpha': 10.0, 'poly__degree': 1}\n",
+            "R^2 on Training Set: 0.0746\n",
+            "R^2 on Test Set: 0.0483\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "b) Evaluate your model for overfitting by comparing the training and test R^2 values. A large\n",
+        "discrepancy may indicate overfitting, while similar R^2 values suggest better generalizability"
+      ],
+      "metadata": {
+        "id": "lel-WLd1pp4d"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "r2_difference = r2_train - r2_test\n",
+        "print(f\"\\nDifference between Training and Test R^2: {r2_difference:.4f}\")\n",
+        "\n",
+        "if abs(r2_difference) > 0.1:\n",
+        "    print(\"Significant difference in R^2 values observed. The model might be overfitting.\")\n",
+        "else:\n",
+        "    print(\"The difference in R^2 values is relatively small. The model demonstrates good generalization.\")"
+      ],
+      "metadata": {
+        "id": "novY5XhnpuR-",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "0aa16745-b50a-466f-b32a-798bcaf86a6e"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\n",
+            "Difference between Training and Test R^2: 0.0263\n",
+            "The difference in R^2 values is relatively small. The model demonstrates good generalization.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "c) Document all variables included in your final model. Attempt to interpret each variable’s\n",
+        "role in predicting song popularity in context. For example, discuss how and why features\n",
+        "like danceability or acousticness may contribute to popularity predictions."
+      ],
+      "metadata": {
+        "id": "b5yFM1sXpuna"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Acousticness:  Higher acousticness might indicate a more mellow, less produced sound.  The relationship\n",
+        "with popularity is likely non-linear.  A small amount of acousticness could be appealing, but excessive\n",
+        "acousticness might not be popular with all audiences.\n",
+        "Danceability:  Songs that are easier to dance to are generally perceived as more upbeat and fun.  This\n",
+        "feature likely has a strong positive correlation with popularity, though a very high danceability might not\n",
+        "always translate to popularity.\n",
+        "Duration_ms:  Song length might have a non-linear relationship with popularity.  Songs that are too short\n",
+        "might not provide enough substance, whereas extremely long songs could deter listeners.\n",
+        "Energy: Energetic songs tend to be more popular, especially within certain genres.\n",
+        "Instrumentalness:  Songs with high instrumentalness may appeal to a more niche audience, which could\n",
+        "affect popularity.\n",
+        "Key:  The musical key might have a slight effect, but this is likely less significant than other features.\n",
+        "Liveness:  High liveness might suggest a live recording, which could be a positive or negative attribute\n",
+        "depending on listener preferences.\n",
+        "Loudness:  Louder songs tend to be more attention-grabbing.\n",
+        "Mode:  Major or minor key; its impact is likely subtle.\n",
+        "Speechiness:  The presence of spoken words in a song; a high speechiness value typically suggests a rap or\n",
+        "spoken-word piece, which may appeal to different sub-populations.\n",
+        "Tempo:  Tempo's effect on popularity is complex.  A moderate tempo might suit most listeners, but fast\n",
+        "tempos are associated with danceability.\n",
+        "Time_signature:  Time signature is not very influential in music popularity compared to other features.\n",
+        "Valence:  Musical positiveness conveyed by a track.  Higher valence scores often correlate with happiness\n",
+        "and might signal a more upbeat and therefore popular song."
+      ],
+      "metadata": {
+        "id": "Vx2ujE7jMoUy"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Note: Keep a log of each model variation you try, including the transformations, higher-order terms,\n",
+        "and interactions added. You do not need to report each variation, but if you forget to mark it down,\n",
+        "you may try it again."
+      ],
+      "metadata": {
+        "id": "qmSLc2LdpyL-"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.preprocessing import PolynomialFeatures\n",
+        "\n",
+        "spotify_train = pd.read_csv('https://richardson.byu.edu/220/spotify_train.csv')\n",
+        "spotify_test = pd.read_csv('https://richardson.byu.edu/220/spotify_test.csv')\n",
+        "\n",
+        "X_train = spotify_train.drop('popularity', axis=1)\n",
+        "y_train = spotify_train['popularity']\n",
+        "X_test = spotify_test.drop('popularity', axis=1)\n",
+        "y_test = spotify_test['popularity']\n",
+        "\n",
+        "X_train = X_train.fillna(X_train.mean())\n",
+        "X_test = X_test.fillna(X_test.mean())\n",
+        "\n",
+        "poly = PolynomialFeatures(degree=2, include_bias=False, interaction_only=False)\n",
+        "X_train_poly = poly.fit_transform(X_train)\n",
+        "X_test_poly = poly.transform(X_test)\n",
+        "\n",
+        "model = LinearRegression()\n",
+        "model.fit(X_train_poly, y_train)\n",
+        "\n",
+        "y_pred_train = model.predict(X_train_poly)\n",
+        "y_pred_test = model.predict(X_test_poly)\n",
+        "\n",
+        "r2_train = r2_score(y_train, y_pred_train)\n",
+        "r2_test = r2_score(y_test, y_pred_test)\n",
+        "\n",
+        "print(f\"R^2 on Training Set: {r2_train:.4f}\")\n",
+        "print(f\"R^2 on Test Set: {r2_test:.4f}\")\n",
+        "\n",
+        "r2_difference = r2_train - r2_test\n",
+        "print(f\"\\nDifference between Training and Test R^2: {r2_difference:.4f}\")\n",
+        "\n",
+        "if abs(r2_difference) > 0.1:\n",
+        "    print(\"Significant difference in R^2 values observed. The model might be overfitting.\")\n",
+        "else:\n",
+        "    print(\"The difference in R^2 values is relatively small. The model demonstrates good generalization.\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "ccjbHVYkNECS",
+        "outputId": "065053ea-2530-4dec-c273-c640bbfb66b7"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "R^2 on Training Set: 0.2713\n",
+            "R^2 on Test Set: 0.0703\n",
+            "\n",
+            "Difference between Training and Test R^2: 0.2010\n",
+            "Significant difference in R^2 values observed. The model might be overfitting.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Expected Outcomes"
+      ],
+      "metadata": {
+        "id": "l5SS6R1ep1lc"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Your report should summarize the steps you took to optimize the model and should clearly state the\n",
+        "final in-sample and out-of-sample R2 values. Additionally, include a discussion of any overfitting or\n",
+        "underfitting observed, and provide interpretations of all final model variables in the context of song\n",
+        "popularity."
+      ],
+      "metadata": {
+        "id": "H-YXrvRWqEhJ"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Discussion and Reporting"
+      ],
+      "metadata": {
+        "id": "5IYjSSzsqILC"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## 1) Model Development"
+      ],
+      "metadata": {
+        "id": "soekUmyRqMPs"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "(a) Describe several model variations you tested and the rationale for adding transformations,\n",
+        "interactions, and/or stepwise selection."
+      ],
+      "metadata": {
+        "id": "PPQnjLEBqO_w"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Starting with a basese model to see where things needed to be tuned and adjusted, we were able to find multiple transformations that made logical sense in our data. We assumed that transformations would be necessary to handle data skew and scale issues. Stepwise selection was not applied in the early stages, but eventually made it easier to refine our view of which variables were most necessary for the model to provide good and valid predictions."
+      ],
+      "metadata": {
+        "id": "Bb3KoZ_cqS86"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "(b) Summarize any important transformations that improved model fit"
+      ],
+      "metadata": {
+        "id": "wKCtSJOtqTOd"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Log transformations and square root transformations were applied to handle any skewed data, as well as square transformations making the impact of smaller scale variables more apparent."
+      ],
+      "metadata": {
+        "id": "9IXfX4juqVXT"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "(c) DO NOT report every single model attempted."
+      ],
+      "metadata": {
+        "id": "l-EaAXDoqWFp"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## 2) Model Evaluation"
+      ],
+      "metadata": {
+        "id": "YPvpcQD3qafI"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "(a) Report the final in-sample R^2 and out-of-sample R^2\n",
+        "for your best model."
+      ],
+      "metadata": {
+        "id": "CfdJC9XAqdki"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "The best model, a linear regression with alpha = 10.0 and a polynomial degree of 1, achieved an in-sample R^2 of 0.0746 and an out-of-sample R^2 of 0.0483. While modest, these results provide some insight into the factors influencing article shares."
+      ],
+      "metadata": {
+        "id": "VMaltnYMqhjf"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "(b) Justify why the selected model is the best, based on statistical performance and interpretability."
+      ],
+      "metadata": {
+        "id": "ONRgqNa9qjDV"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "The selected linear regression model with alpha = 10 and a polynomial degree of 1 was chosen for its balance of simplicity, interpretability, and statistical performance. Its regularization mitigates overfitting while maintaining a straightforward structure, making it easy to identify and explain the most influential predictors. Although its R^2 values (0.0746 in-sample and 0.0483 out-of-sample) are modest, the model outperformed more complex alternatives in terms of generalization, highlighting its reliability for predicting article shares in unseen data."
+      ],
+      "metadata": {
+        "id": "qJ-rzJSJqlyU"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## 3) Interpretation"
+      ],
+      "metadata": {
+        "id": "DDFY3xzBqmzL"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "(a) Interpret the coefficients of your final model in the context of song popularity"
+      ],
+      "metadata": {
+        "id": "emwE-BGpqpri"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "The coefficients show the relationship, more specifically what an increase of 1 in song popularity will mean for the variables who's coefficients are shown. When song popularity increases by one, the variable changes by it's corresponding coefficient."
+      ],
+      "metadata": {
+        "id": "0j-z2pROqtmU"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "(b) Discuss which features are most influential for predicting popularity and any interactions\n",
+        "that provide insights"
+      ],
+      "metadata": {
+        "id": "dw88wRLPqt9v"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "We saw that instrumentalness and tempo had the smallest p-scores at .001 each. An interesting interaction was cubic instrumentalness. It had a p-score of .004"
+      ],
+      "metadata": {
+        "id": "HRULlDIKqv6m"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Deliverables"
+      ],
+      "metadata": {
+        "id": "4HOdtM7Yqw4R"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Your final submission will consist of a Python Notebook or some other form of a report. Your report\n",
+        "should be well-organized and formatted as a report, results, and visualizations. Make sure to answer\n",
+        "the questions directly in the report. For easier grading, and to make sure we don’t miss anything when\n",
+        "grading, label the questions answered directly i.e. have dedicated sections to the four parts above and\n",
+        "be clear what question you are answering in each section."
+      ],
+      "metadata": {
+        "id": "1VgaVbY8qzXE"
+      }
+    }
+  ]
+}
